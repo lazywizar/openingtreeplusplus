@@ -16,13 +16,14 @@ import {
 } from 'reactstrap';
 import classnames from 'classnames';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faUser, faList, faCog, faChartBar, faBook } from '@fortawesome/free-solid-svg-icons'
+import { faUser, faList, faCog, faChartBar, faBook, faUpload } from '@fortawesome/free-solid-svg-icons'
 import MovesList from './moves/MovesList'
 import BookMoves from './moves/BookMoves'
 import {trackEvent} from '../app/Analytics'
 import * as Constants from '../app/Constants'
 import ReportControls from './ReportControls'
 import { Table, TableRow, TableBody, TableCell } from '@material-ui/core'
+import RepertoireUploader from '../components/RepertoireUploader'
 
 export default class ControlsContainer extends React.Component {
     constructor(props){
@@ -143,6 +144,14 @@ export default class ControlsContainer extends React.Component {
         </NavItem>
         <NavItem>
           <NavLink
+            className={classnames({ active: this.state.activeTab === 'repertoire' })}
+            onClick={() => { this.toggle('repertoire'); }}
+          >
+            <FontAwesomeIcon icon={faUpload} /> {this.state.activeTab === 'repertoire'?"Repertoire":""}
+          </NavLink>
+        </NavItem>
+        <NavItem>
+          <NavLink
             className={classnames({ active: this.state.activeTab === 'settings' })}
             onClick={() => { this.toggle('settings'); }}
           >
@@ -222,6 +231,13 @@ export default class ControlsContainer extends React.Component {
               onChange = {this.props.settingsChange} />
             </Col>
           </Row>
+        </TabPane>
+        <TabPane tabId="repertoire">
+          <RepertoireUploader
+            onRepertoireLoad={(pgn) => {
+              this.props.onRepertoireLoad(pgn);
+            }}
+          />
         </TabPane>
       </TabContent>
         </div>

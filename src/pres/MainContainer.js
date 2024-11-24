@@ -35,11 +35,14 @@ import GlobalHeader from './GlobalHeader'
 import ControlsContainer from './ControlsContainer'
 import { addStateManagement } from './StateManagement'
 import SnackbarContentWrapper from './SnackbarContentWrapper'
+import RepertoireUploader from '../components/RepertoireUploader';
+import RepertoireService from '../services/RepertoireService';
+
 export default class MainContainer extends React.Component {
 
   constructor(props){
     super(props)
-  
+
     let urlVariant = new URLSearchParams(window.location.search).get("variant")
     let selectedVariant = urlVariant || Constants.VARIANT_STANDARD
     this.chess = chessLogic(selectedVariant)
@@ -73,7 +76,7 @@ export default class MainContainer extends React.Component {
     this.againstBrushes = ['blue','paleRed', 'paleRed', 'red']
     window.addEventListener('resize', this.handleResize.bind(this))
     let userProfile = UserProfile.getUserProfile()
-    initializeAnalytics(userProfile.userTypeDesc, this.state.settings.darkMode?"dark":"light", 
+    initializeAnalytics(userProfile.userTypeDesc, this.state.settings.darkMode?"dark":"light",
       this.state.settings.movesSettings.openingBookType)
 
   }
@@ -105,12 +108,12 @@ export default class MainContainer extends React.Component {
       }
       cookieManager.setLichessAccessToken(accessToken.token.value)
       console.log("access token", accessToken)
-      window.location.replace(clientUrl)      
+      window.location.replace(clientUrl)
     }).catch((error) => {
       console.log("error", error)
     })
-      
-    
+
+
 
   }
   handleResize() {
@@ -157,7 +160,7 @@ export default class MainContainer extends React.Component {
     this.mergePlayerAndBookMoves(playerMoves, bookMoves)
 
     return <div className="rootView">
-      <GlobalHeader settings={this.state.settings} 
+      <GlobalHeader settings={this.state.settings}
                     settingsChange={this.settingsChange.bind(this)}
                     toggleFeedback = {this.toggleFeedback(false)}/>
       <Container className="mainContainer">
@@ -210,6 +213,10 @@ export default class MainContainer extends React.Component {
               forceFetchBookMoves={this.forceFetchBookMoves.bind(this)}
               highlightArrow={this.highlightArrow.bind(this)}
               oauthManager={this.oauth}
+              onRepertoireLoad={(pgn) => {
+                RepertoireService.loadRepertoire(pgn);
+                this.forceUpdate();
+              }}
             />
           </Col>
         </Row>
@@ -267,7 +274,7 @@ export default class MainContainer extends React.Component {
 
   componentDidMount() {
       handleDarkMode(this.state.settings.darkMode);
-      
+
       // hack to fix https://github.com/openingtree/openingtree/issues/243
       // refreshing the chessboard after its initial render seems to fix this issue
       setImmediate(this.handleResize.bind(this))

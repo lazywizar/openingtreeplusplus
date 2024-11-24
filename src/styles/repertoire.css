@@ -1,0 +1,59 @@
+.repertoire-match {
+    color: #28a745;
+    margin-left: 5px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.repertoire-suggestion {
+    color: #666;
+    font-style: italic;
+    font-size: 0.9em;
+    padding: 5px;
+    margin-top: 5px;
+    background: #f8f9fa;
+    border-left: 3px solid #28a745;
+    border-radius: 0 4px 4px 0;
+}
+
+.moveRow .repertoire-suggestion {
+    margin-top: 5px;
+    font-size: 0.85em;
+}
+
+.repertoire-uploader {
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.repertoire-uploader .card-header {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
+.repertoire-uploader .upload-section {
+    text-align: center;
+    padding: 30px;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.repertoire-uploader .upload-section:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.file-input {
+    margin: 10px 0;
+}
+
+.nav-tabs .nav-link {
+    cursor: pointer;
+    padding: 10px 15px;
+}
+
+.nav-tabs .nav-link svg {
+    margin-right: 5px;
+}

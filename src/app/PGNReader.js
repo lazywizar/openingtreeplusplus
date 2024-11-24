@@ -20,11 +20,11 @@ export default class PGNReader {
 
 
     fetchPGNFromSite(playerName, playerColor, site, selectedNotablePlayer,
-        selectedNotableEvent, selectedOnlineTournament, shouldDownloadToFile, 
-        advancedFilters, notify, showError, stopDownloading, files, 
+        selectedNotableEvent, selectedOnlineTournament, shouldDownloadToFile,
+        advancedFilters, notify, showError, stopDownloading, files,
         downloadResponse, tokens) {
         this.continueProcessingGames = true
-        
+
         let handleResponse = (result, pendingDownloads) => {
             if(!result) {
                 return this.continueProcessingGames
@@ -32,7 +32,7 @@ export default class PGNReader {
             this.totalGames += result.length
             this.pendingGames += result.length
             this.pendingDownloads = pendingDownloads
-            
+
 
             setTimeout(() => {
                 this.parsePGNTimed(site, result, 0, advancedFilters, playerColor, playerName, notify, showError, stopDownloading)
@@ -54,7 +54,7 @@ export default class PGNReader {
             new OnlineTournamentIterator(this.variant,tokens.lichess, selectedOnlineTournament, advancedFilters, processor,showError)
         }
         return 'done'
-        
+
     }
 
     parsePGNTimed(site, pgnArray, index, advancedFilters, playerColor,  playerName, notify, showError, stopDownloading) {
@@ -74,7 +74,7 @@ export default class PGNReader {
         // ignore pgn files that do not start with move 1. these are mostly "from position tournaments in lichess"
         // for this, we need to check that the move number actually exists and is not 1.
         // there are some pgns that do not have any move numbers and we should assume they start with move 1
-        if(pgn.moves.length>2 && pgn.moves[0] && 
+        if(pgn.moves.length>2 && pgn.moves[0] &&
             (pgn.moves[0].move_number == null || pgn.moves[0].move_number === 1)) {
             let chess=this.chess
             chess.load(this.fen)
@@ -87,7 +87,7 @@ export default class PGNReader {
                 let targetFen = chess.fen()
                 if(!move){
                     if(!pgnParseFailed) {
-                        console.log('failed to load game ',  pgn.moves, element.move)
+                        console.log('failed to load game ', pgn.Date, pgn.black, pgn.url, pgn.moves, element.move)
                     }
                     pgnParseFailed=true
                     return
@@ -100,6 +100,9 @@ export default class PGNReader {
             })
             if(pgnParseFailed) {
                 showError("Failed to load a game", `${playerName}:${playerColor}`)
+                // TODO: Remove this after testing
+                console.log('Failed to load a game', pgn.moves, parsedMoves)
+
             } else {
                 let fen = chess.fen()
                 let parsedPGNDetails = {
@@ -118,7 +121,7 @@ export default class PGNReader {
     }
 
     gameResult(pgn, site) {
-        let url= null 
+        let url= null
         if (site === Constants.SITE_CHESS_DOT_COM) {
             url = pgn.headers.Link
         } else if(site === Constants.SITE_LICHESS || site === Constants.SITE_ONLINE_TOURNAMENTS) {
