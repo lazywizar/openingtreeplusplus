@@ -95,7 +95,7 @@
   },
   "scripts": {
     "start": "node scripts/start.js",
-    "build": "node scripts/build.js",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider node scripts/build.js",
     "test": "export NODE_ENV=test; npx babel ./src --out-dir dist && cucumber-js tests/functionalTests $REPORT -t 'not @skipTests' $EXTRAS",
     "testUI": "cucumber-js tests/uiTests $REPORT $EXTRAS",
     "testciUI": "cucumber-js tests/uiTests -t 'not @skipci' $REPORT $EXTRAS"
