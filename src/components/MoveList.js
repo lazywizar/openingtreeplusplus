@@ -20,7 +20,7 @@ export default function MoveList({ moves, onMoveClick }) {
                 <span className="move">
                     {move.san || move}
                     {isMatchingMove &&
-                        <span className="repertoire-match">✓</span>}
+                        <span className="repertoire-match green-tick">✓</span>}
                 </span>
                 {hasDeviation && index === repertoireInfo.deviations[0].atMove - 1 &&
                     <div className="repertoire-suggestion">

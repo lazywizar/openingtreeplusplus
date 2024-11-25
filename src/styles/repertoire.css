@@ -3,3 +3,7 @@
     margin-left: 5px;
     font-weight: bold;
 }
+
+.repertoire-match.green-tick {
+  color: green !important;
+}
