@@ -2,7 +2,7 @@ import React from 'react'
 import {Progress, Popover } from "reactstrap"
 import { Table, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@material-ui/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faExternalLinkAlt, faInfoCircle, faExclamationTriangle, faWrench } from '@fortawesome/free-solid-svg-icons'
+import { faExternalLinkAlt, faInfoCircle, faExclamationTriangle, faWrench, faCheck } from '@fortawesome/free-solid-svg-icons'
 import ReportControls from '../ReportControls'
 import {Container, Row, Col} from 'reactstrap'
 import "react-step-progress-bar/styles.css";
@@ -226,7 +226,6 @@ export default class MovesTable extends React.Component {
         }
     }
     getMultiItemRow(move, moveIndex) {
-        // Get repertoire info only if it's the player's turn
         const isPlayersTurn = this.props.turnColor === this.props.settings.playerColor;
         let isMatchingMove = false;
 
@@ -243,7 +242,7 @@ export default class MovesTable extends React.Component {
                         onMouseOut={()=>this.props.highlightArrow(null)}>
             <TableCell size="small" className="smallCol">
                 {move.san}
-                {isMatchingMove && <span className="repertoire-match">✓</span>}
+                {this.getRepertoireIcon(isMatchingMove)}
             </TableCell>
             <TableCell size="small" id={`p${this.props.namespace}${moveIndex}`} className="smallCol" onClick ={this.togglePerformancePopover(moveIndex)}>
                 {simplifyCount(move.moveCount)}{this.getInfoIcon(moveIndex)}
@@ -279,7 +278,16 @@ export default class MovesTable extends React.Component {
         return <FontAwesomeIcon
             className={`lowOpacity leftPadding`}
             icon={faInfoCircle}/>
+    }
 
+    getRepertoireIcon(isMatchingMove) {
+        if (isMatchingMove) {
+            console.log("Green check icon should show")
+            return <FontAwesomeIcon
+                className={`leftPadding greenColor`}
+                icon={faCheck}/>
+        }
+        return null;
     }
 
     getProgressLabel(count, total){
@@ -318,7 +326,7 @@ export default class MovesTable extends React.Component {
                 onMouseOut={()=>this.props.highlightArrow(null)}>
                 <TableCell size="small" className="smallCol">
                     {move.san}
-                    {isMatchingMove && <span className="repertoire-match">✓</span>}
+                    {this.getRepertoireIcon(isMatchingMove)}
                 </TableCell>
                 <TableCell colSpan = "2">
                         {sampleResultWhite} {sampleResult} {sampleResultBlack} {<FontAwesomeIcon className="pointerExternalLink" onClick ={this.props.launchGame(move.details.lastPlayedGame)} icon={faExternalLinkAlt}/>}

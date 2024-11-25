@@ -7,3 +7,19 @@
 .repertoire-match.green-tick {
   color: green !important;
 }
+
+.leftPadding {
+    margin-left: 5px;
+}
+
+.greenColor {
+    color: #28a745;
+}
+
+.redColor {
+    color: #dc3545;
+}
+
+.lowOpacity {
+    opacity: 0.7;
+}
