@@ -94,7 +94,7 @@
     "worker-plugin": "^4.0.3"
   },
   "scripts": {
-    "start": "cross-env NODE_OPTIONS='--openssl-legacy-provider --no-experimental-fetch' node scripts/start.js",
+    "start": "cross-env NODE_OPTIONS='--openssl-legacy-provider --no-experimental-fetch' HOST=0.0.0.0 PORT=$PORT node scripts/start.js",
     "build": "yarn install && cross-env NODE_OPTIONS='--openssl-legacy-provider --no-experimental-fetch' node scripts/build.js",
     "test": "export NODE_ENV=test; npx babel ./src --out-dir dist && cucumber-js tests/functionalTests $REPORT -t 'not @skipTests' $EXTRAS",
     "testUI": "cucumber-js tests/uiTests $REPORT $EXTRAS",
