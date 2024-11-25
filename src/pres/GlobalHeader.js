@@ -230,11 +230,11 @@ const GlobalHeader = (props) => {
           <Nav className={`mr-auto`} navbar>
             <NavItem>
               <NavLink className="navLinkButton" onClick={launch("https://www.youtube.com/watch?v=AJ66-HqdpXE","mainVideo")}>
+                {/* <span>
+                    "It's so powerful" - IM Eric Rosen
+                </span> */}
                 <span>
-                  "It's so powerful" - IM Eric Rosen
-                </span>
-                <span className="smallText">
-                  [Video]
+                "It's so MUCH MORE powerful" - Someone will say!
                 </span>
               </NavLink>
             </NavItem>

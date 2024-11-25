@@ -60,7 +60,7 @@ const RepertoireUploader = ({ onRepertoireLoad }) => {
                     />
                     <Button
                         color="primary"
-                        size="lg"
+                        size="sm"
                         onClick={() => document.getElementById('repertoire-file').click()}
                     >
                         <FontAwesomeIcon icon={faUpload} className="mr-2" />
@@ -71,7 +71,7 @@ const RepertoireUploader = ({ onRepertoireLoad }) => {
                 <div className="mt-3">
                     <small className="text-muted">
                         Supported format: Standard PGN files containing chess moves.
-                        Example: "1. e4 e5 2. Nf3 Nc6 *"
+                        Example: " 1. c4 e5 (1... Nf6 2. Nc3 e5 (2... g6 3. g3 Bg7 (3... d6 4. Bg2"
                     </small>
                 </div>
             </CardBody>
