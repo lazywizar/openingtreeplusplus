@@ -2,7 +2,7 @@
 
 ## Entry
  * Launch openingtree.com
- * Make sure all tabs are are clickable. 
+ * Make sure all tabs are are clickable.
  * Change source to make sure that corresponding advanced filters and input field changes accordingly
  * Copy fen to make sure it copies to clipboard
  * Flip board
@@ -18,7 +18,7 @@
  * Fen should change on report tab
  * Computer analysis button should go to the right fen
  * Opening names should change
- 
+
 ## Load
  * Enter `DrNykterstein` for lichess and `hikaru` for chess.com and click load
  * Click stop mid download and make sure it works
@@ -37,7 +37,7 @@
  * External links to game should work
  * Game result should show at the end. Clicking on that should go to game results
  * Info message at the bottom of moves tab should show the right message
- 
+
 ## Download
  * Click Export as PGN button. File should download and be openable using scid
  * Filters should work when downloading files
@@ -52,7 +52,7 @@
  * Full report in report tab should show report of current state
  * external links should work
  * Clear games control should work
- 
+
  ## Mobile
  * Change size of browser window to make sure UI looks ok
  * Open on mobile browser
@@ -67,7 +67,7 @@
  * Try chess.com user `TheZahlen`. console log should show one game fails parsing should not break entire UI
  * Try `alireza2003` console log should show one game fails parsing should not break entire UI
  * Try clicking load and export button without entering a username. Error message should show
- 
+
 ## Tracking
 Make sure tracking events are logged for the following
  * Tab changes
@@ -82,4 +82,4 @@ Make sure tracking events are logged for the following
  * Errors
  * External links
  * Export as pgn
- 
+

@@ -16,9 +16,13 @@ This does not correlate one to one with the code modules but the interactions at
 
 ![GitHub Logo](/docs/images/architecture.png)
 
+## Install dependencies and build
+```
+yarn install && yarn build
+```
+
 ## Run locally
 ```
-yarn
 yarn start
 ```
 starts a server on port `3000`
@@ -28,4 +32,8 @@ starts a server on port `3000`
 yarn build
 ```
 
-
+## Environment Variables:
+```
+NODE_OPTIONS=--openssl-legacy-provider --no-experimental-fetch
+PORT=3000
+```
