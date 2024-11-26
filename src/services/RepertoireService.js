@@ -1,146 +1,12 @@
-import { REPERTOIRE_CONFIG } from '../config/constants';
+import { MAX_MOVES_TO_COMPARE } from '../config/constants';
 import { parse } from '../app/PGNParser';
-
-class RepertoireTree {
-    constructor() {
-        this.root = {
-            moves: {},
-            parent: null
-        };
-        this.current = this.root;
-    }
-
-    addLine(moves) {
-        let node = this.root;
-
-        moves.forEach(move => {
-            const san = move.san || move;
-            if (!node.moves[san]) {
-                node.moves[san] = {
-                    moves: {},
-                    parent: node
-                };
-            }
-            node = node.moves[san];
-        });
-    }
-
-    hasMove(move) {
-        const san = move.san || move;
-        return !!this.current.moves[san];
-    }
-
-    getNextPosition(move) {
-        const san = move.san || move;
-        if (this.hasMove(move)) {
-            this.current = this.current.moves[san];
-            return this.current;
-        }
-        return null;
-    }
-
-    reset() {
-        this.current = this.root;
-    }
-}
+const Chess = require('chess.js');
 
 class RepertoireService {
     constructor() {
-        this.repertoire = new RepertoireTree();
-    }
-
-    cleanPGN(pgn) {
-        try {
-            console.log('=== PGN Cleaning Start ===');
-            console.log('Original PGN:', pgn);
-
-            // Normalize line endings and whitespace
-            pgn = pgn.replace(/\r\n/g, '\n')
-                    .replace(/\r/g, '\n')
-                    .trim();
-
-            // Split into headers and moves
-            let [headers, ...moveSections] = pgn.split('\n\n');
-
-            // If there's no clear separation, try to separate headers and moves
-            if (!moveSections.length) {
-                const lines = pgn.split('\n');
-                const headerLines = [];
-                const moveLines = [];
-
-                let inHeaders = true;
-                for (const line of lines) {
-                    if (line.trim().startsWith('[') && line.trim().endsWith(']')) {
-                        headerLines.push(line.trim());
-                    } else if (line.trim()) {
-                        inHeaders = false;
-                        moveLines.push(line.trim());
-                    }
-                }
-
-                headers = headerLines.join('\n');
-                moveSections = [moveLines.join(' ')];
-            }
-
-            let moves = moveSections.join('\n');
-
-            // Pre-process move text
-            moves = moves
-                // Remove comments
-                .replace(/\{[^}]*\}/g, '')
-                // Remove NAGs
-                .replace(/\$\d+/g, '')
-                // Handle nested parentheses
-                .replace(/\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '')
-                // Normalize whitespace
-                .replace(/\s+/g, ' ')
-                .trim();
-
-            // Process moves with proper formatting
-            moves = moves.split(' ').map(token => {
-                // Handle move numbers
-                if (/^\d+\.{1,3}$/.test(token)) {
-                    return token.replace(/\.{1,3}$/, '.'); // Standardize to single period
-                }
-                // Fix castling notation
-                if (token === '0-0') return 'O-O';
-                if (token === '0-0-0') return 'O-O-O';
-                return token;
-            }).join(' ');
-
-            // Clean up any remaining issues
-            moves = moves
-                // Ensure proper spacing after move numbers
-                .replace(/(\d+\.)(\S)/g, '$1 $2')
-                // Remove extra periods
-                .replace(/\.{2,}/g, '.')
-                // Normalize spacing
-                .replace(/\s+/g, ' ')
-                .trim();
-
-            // Ensure proper game termination
-            if (!moves.match(/(?:1-0|0-1|1\/2-1\/2|\*)\s*$/)) {
-                moves += ' *';
-            }
-
-            const cleanedPGN = `${headers}\n\n${moves}`;
-            console.log('Cleaned PGN:', cleanedPGN);
-            console.log('=== PGN Cleaning End ===');
-
-            // Validate the format before returning
-            try {
-                parse(cleanedPGN);
-            } catch (parseError) {
-                console.error('Parse validation failed:', parseError);
-                throw new Error(`PGN validation failed: ${parseError.message}`);
-            }
-
-            return cleanedPGN;
-
-        } catch (error) {
-            console.error('Error in cleanPGN:', error);
-            throw new Error(`PGN cleaning failed: ${error.message}`);
-        }
+        // Map of FEN positions to recommended moves
+        this.positionMap = new Map();
+        this.playerColor = null;
     }
 
     loadRepertoire(pgn) {
@@ -151,22 +17,21 @@ class RepertoireService {
                 throw new Error('Invalid PGN: Must be a non-empty string');
             }
 
-            // Initialize new repertoire tree
-            this.repertoire = new RepertoireTree();
-
             // Clean PGN
             const cleanedPGN = this.cleanPGN(pgn);
 
             // Parse PGN
             console.log('Parsing cleaned PGN:', cleanedPGN);
             const games = parse(cleanedPGN);
-            console.log('Parsed games:', games);
 
             if (!games || games.length === 0) {
                 throw new Error('No valid games found in PGN');
             }
 
-            // Process each game
+            // Reset position map
+            this.positionMap.clear();
+
+            // Process each game to build position map
             games.forEach((game, index) => {
                 try {
                     if (!game.moves || game.moves.length === 0) {
@@ -174,56 +39,180 @@ class RepertoireService {
                         return;
                     }
 
-                    // Convert moves to standardized format
-                    const moves = game.moves.map(move => {
-                        if (typeof move === 'string') {
-                            return { san: move };
-                        }
-                        if (move.move) {
-                            return { san: move.move };
-                        }
-                        console.warn('Invalid move format:', move);
-                        throw new Error(`Invalid move format in game ${index + 1}`);
-                    });
+                    // Determine player color from first game
+                    if (index === 0) {
+                        const firstMove = game.moves[0].move || game.moves[0];
+                        this.playerColor = firstMove === '1.' ? 'black' : 'white';
+                        console.log('Detected player color:', this.playerColor);
+                    }
 
-                    console.log(`Adding moves to repertoire:`, moves);
-                    this.repertoire.addLine(moves);
+                    this.processGameMoves(game.moves);
 
                 } catch (gameError) {
                     console.error(`Error processing game ${index + 1}:`, gameError);
-                    throw new Error(`Failed to process game ${index + 1}: ${gameError.message}`);
                 }
             });
 
+            console.log(`Loaded repertoire with ${this.positionMap.size} positions`);
             console.log('=== Loading Repertoire End ===');
             return true;
 
         } catch (error) {
             console.error('Error in loadRepertoire:', error);
-            throw new Error(`Failed to load repertoire: ${error.message}`);
+            throw error;
         }
     }
 
+    processGameMoves(moves) {
+        const chess = new Chess();
+
+        moves.forEach((move, index) => {
+            const san = move.move || move;
+            const isPlayerMove = this.isPlayerMove(chess);
+
+            if (isPlayerMove) {
+                // Store the position before the move
+                const fen = chess.fen();
+                if (!this.positionMap.has(fen)) {
+                    this.positionMap.set(fen, new Set());
+                }
+                this.positionMap.get(fen).add(san);
+            }
+
+            try {
+                chess.move(san);
+            } catch (error) {
+                console.warn(`Invalid move ${san}:`, error);
+            }
+        });
+    }
+
+    isPlayerMove(chess) {
+        return (chess.turn() === 'w' && this.playerColor === 'white') ||
+               (chess.turn() === 'b' && this.playerColor === 'black');
+    }
+
     compareWithRepertoire(moves) {
-        if (!this.repertoire || !moves) return null;
+        if (!moves || moves.length === 0) return null;
 
         const result = {
             matches: [],
             deviations: []
         };
 
-        this.repertoire.reset();
-        for (let i = 0; i < moves.length && i < REPERTOIRE_CONFIG.MAX_MOVES_TO_COMPARE; i++) {
+        const chess = new Chess();
+
+        for (let i = 0; i < moves.length && i < MAX_MOVES_TO_COMPARE; i++) {
             const move = moves[i];
-            if (this.repertoire.hasMove(move)) {
-                result.matches.push(move.san || move);
-                this.repertoire.getNextPosition(move);
-            } else {
+            const san = move.san || move;
+
+            if (this.isPlayerMove(chess)) {
+                const position = chess.fen();
+                const recommendedMoves = this.positionMap.get(position);
+
+                if (recommendedMoves && recommendedMoves.has(san)) {
+                    result.matches.push(san);
+                } else if (recommendedMoves) {
+                    result.deviations.push({
+                        atMove: i + 1,
+                        playedMove: san,
+                        repertoireLine: Array.from(recommendedMoves)
+                    });
+                    break;
+                }
+            }
+
+            try {
+                chess.move(san);
+            } catch (error) {
+                console.warn(`Invalid move ${san}:`, error);
                 break;
             }
         }
 
         return result;
+    }
+
+    cleanPGN(pgn) {
+        try {
+            console.log('=== PGN Cleaning Start ===');
+            console.log('Original PGN:', pgn);
+
+            // First normalize all line endings to \n
+            pgn = pgn.replace(/\r\n|\r/g, '\n');
+
+            // Split into headers and moves
+            let [headers, ...moveSections] = pgn.split('\n\n');
+            let moves = moveSections.join('\n').trim();
+
+            // Clean up variations and comments
+            let depth = 0;
+            let cleanedMoves = '';
+            let inComment = false;
+
+            for (let i = 0; i < moves.length; i++) {
+                const char = moves[i];
+
+                // Skip carriage returns
+                if (char === '\r') continue;
+
+                if (char === '{') {
+                    inComment = true;
+                    continue;
+                }
+                if (char === '}') {
+                    inComment = false;
+                    continue;
+                }
+                if (inComment) continue;
+
+                if (char === '(') {
+                    depth++;
+                    continue;
+                }
+                if (char === ')') {
+                    depth--;
+                    continue;
+                }
+
+                if (depth === 0) {
+                    // Only add characters from main line
+                    cleanedMoves += char;
+                }
+            }
+
+            // Clean up the remaining text
+            cleanedMoves = cleanedMoves
+                // Remove NAGs
+                .replace(/\$\d+/g, '')
+                // Fix move numbers
+                .replace(/(\d+)\.+/g, '$1.')
+                // Ensure space after move numbers
+                .replace(/(\d+\.)(\S)/g, '$1 $2')
+                // Normalize castling
+                .replace(/0-0-0/g, 'O-O-O')
+                .replace(/0-0/g, 'O-O')
+                // Clean whitespace including carriage returns
+                .replace(/[\s\r]+/g, ' ')
+                .trim();
+
+            // Ensure proper game termination
+            if (!cleanedMoves.match(/(?:1-0|0-1|1\/2-1\/2|\*)\s*$/)) {
+                cleanedMoves += ' *';
+            }
+
+            // Ensure proper spacing between headers and moves
+            const cleanedPGN = `${headers}\n\n${cleanedMoves}`;
+
+            console.log('Cleaned PGN:', cleanedPGN);
+            console.log('=== PGN Cleaning End ===');
+
+            return cleanedPGN;
+
+        } catch (error) {
+            console.error('Error in cleanPGN:', error);
+            throw new Error(`PGN cleaning failed: ${error.message}\nOriginal PGN: ${pgn}`);
+        }
     }
 }
 
