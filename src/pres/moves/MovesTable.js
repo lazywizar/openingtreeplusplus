@@ -57,13 +57,17 @@ export default class MovesTable extends React.Component {
             } else {
                 this.setState({openPerformanceIndex: moveIndex})
             }
-            e.stopPropagation()
+            if (e && typeof e.stopPropagation === 'function') {
+                e.stopPropagation()
+            }
         }
     }
 
     compareClicked(san){
         return (e)=>{
-            e.stopPropagation()
+            if (e && typeof e.stopPropagation === 'function') {
+                e.stopPropagation()
+            }
             this.props.compareToClicked(san)
         }
     }

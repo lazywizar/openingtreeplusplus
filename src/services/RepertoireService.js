@@ -145,8 +145,7 @@ class RepertoireService {
             let [headers, ...moveSections] = pgn.split('\n\n');
             let moves = moveSections.join('\n').trim();
 
-            // Clean up variations and comments
-            let depth = 0;
+            // Clean up comments only, preserve variations
             let cleanedMoves = '';
             let inComment = false;
 
@@ -166,19 +165,8 @@ class RepertoireService {
                 }
                 if (inComment) continue;
 
-                if (char === '(') {
-                    depth++;
-                    continue;
-                }
-                if (char === ')') {
-                    depth--;
-                    continue;
-                }
-
-                if (depth === 0) {
-                    // Only add characters from main line
-                    cleanedMoves += char;
-                }
+                // Keep the character (including parentheses for variations)
+                cleanedMoves += char;
             }
 
             // Clean up the remaining text
@@ -192,7 +180,7 @@ class RepertoireService {
                 // Normalize castling
                 .replace(/0-0-0/g, 'O-O-O')
                 .replace(/0-0/g, 'O-O')
-                // Clean whitespace including carriage returns
+                // Clean excess whitespace including carriage returns
                 .replace(/[\s\r]+/g, ' ')
                 .trim();
 
@@ -213,6 +201,10 @@ class RepertoireService {
             console.error('Error in cleanPGN:', error);
             throw new Error(`PGN cleaning failed: ${error.message}\nOriginal PGN: ${pgn}`);
         }
+    }
+
+    getRecommendedMoves(fen) {
+        return this.positionMap.get(fen);
     }
 }
 
