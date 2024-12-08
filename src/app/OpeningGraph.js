@@ -7,6 +7,7 @@ export default class OpeningGraph {
         this.graph=new Graph()
         this.hasMoves = false
         this.variant = variant
+        this.repertoire = new Map()
     }
     setEntries(arrayEntries, pgnStats){
         this.graph=new Graph(arrayEntries, pgnStats)
@@ -54,7 +55,7 @@ export default class OpeningGraph {
         } else if(!details) {
             return emptyDetails()
         }
-        details = this.updateCalculatedValues(details)   
+        details = this.updateCalculatedValues(details)
         return details
     }
 
@@ -156,7 +157,7 @@ export default class OpeningGraph {
             // just write the index to calculate the stats later
             return resultObject.index
         }
-        
+
         let whiteWin = 0, blackWin = 0, draw = 0, resultInt = 0;
         let playerColor = this.graph.playerColor
         if(resultObject.result === '1-0') {
@@ -192,7 +193,7 @@ export default class OpeningGraph {
         if(Number.isInteger(currentMoveDetails.lastPlayed)) {
             currentLastPlayedGame = this.graph.pgnStats[currentMoveDetails.lastPlayed]
         }
-        if(!currentLastPlayedGame || 
+        if(!currentLastPlayedGame ||
             isDateMoreRecentThan(resultObject.date, currentLastPlayedGame.date)) {
                 currentMoveDetails.lastPlayed = resultObject.index
         }
@@ -200,7 +201,7 @@ export default class OpeningGraph {
         if(Number.isInteger(currentMoveDetails.longestGame)) {
             currentLongestGame = this.graph.pgnStats[currentMoveDetails.longestGame]
         }
-        if(!currentLongestGame || 
+        if(!currentLongestGame ||
             resultObject.numberOfPlys > currentLongestGame.numberOfPlys) {
                 currentMoveDetails.longestGame = resultObject.index
         }
@@ -209,7 +210,7 @@ export default class OpeningGraph {
         if(Number.isInteger(currentMoveDetails.shortestGame)) {
             currentShortestGame = this.graph.pgnStats[currentMoveDetails.shortestGame]
         }
-        if(!currentShortestGame || 
+        if(!currentShortestGame ||
             resultObject.numberOfPlys < currentShortestGame.numberOfPlys) {
                 currentMoveDetails.shortestGame = resultObject.index
         }
@@ -241,10 +242,13 @@ export default class OpeningGraph {
     }
     movesForFen(fullFen) {
         let fen = simplifiedFen(fullFen)
+        let recommendedMove = this.repertoire.get(fen)
 
         var currNode = this.graph.nodes.get(fen)
+        let moves = []
+
         if(currNode && currNode.playedBy) {
-            return Array.from(Object.entries(currNode.playedBy)).map((entry)=> {
+            moves = Array.from(Object.entries(currNode.playedBy)).map((entry)=> {
                 let chess = chessLogic(this.variant, fullFen)
                 let move = chess.move(entry[0], {sloppy: true})
                 if(!move) {
@@ -259,11 +263,29 @@ export default class OpeningGraph {
                     level:this.levelFor(entry[1], currNode.playedByMax),
                     san:move.san,
                     details:targetNodeDetails,
-                    moveCount:entry[1]
+                    moveCount: entry[1],
+                    isRecommended: move.san === recommendedMove
                 }
             }).filter(e=>!!e) // filter out moves that are null because of issue #306
-        }        
-        return null
+        }
+
+        if(recommendedMove && !moves.find(m => m.san === recommendedMove)) {
+            let chess = chessLogic(this.variant, fullFen)
+            let move = chess.move(recommendedMove, {sloppy: true})
+            if(move) {
+                moves.push({
+                    orig: move.from,
+                    dest: move.to,
+                    level: 1,
+                    san: move.san,
+                    details: emptyDetails(),
+                    moveCount: 0,
+                    isRecommended: true
+                })
+            }
+        }
+
+        return moves
     }
 
     levelFor(moveCount, maxCount){
@@ -274,6 +296,39 @@ export default class OpeningGraph {
             return 2
         }
         return 1
+    }
+
+    loadRepertoire(pgnContent) {
+        let chess = chessLogic(this.variant)
+
+        // Parse PGN and process each move
+        let lines = pgnContent.split('\n')
+
+        lines.forEach(line => {
+            if(line.trim().startsWith('1.')) { // New variation
+                chess.reset()
+                let moves = line.trim().split(/\s+/)
+                moves.forEach(moveText => {
+                    if(moveText.match(/^\d+\./)) return // Skip move numbers
+
+                    let currentFen = chess.fen()
+                    let move = chess.move(moveText, {sloppy: true})
+                    if(move) {
+                        this.addRepertoireMove(currentFen, move.san)
+                    }
+                })
+            }
+        })
+    }
+
+    addRepertoireMove(fullFen, recommendedMove) {
+        let fen = simplifiedFen(fullFen)
+        this.repertoire.set(fen, recommendedMove)
+    }
+
+    getRepertoireMove(fullFen) {
+        let fen = simplifiedFen(fullFen)
+        return this.repertoire.get(fen)
     }
 
 }

@@ -16,7 +16,7 @@ import {
 } from 'reactstrap';
 import classnames from 'classnames';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faUser, faList, faCog, faChartBar, faBook } from '@fortawesome/free-solid-svg-icons'
+import { faUser, faList, faCog, faChartBar, faBook, faUpload } from '@fortawesome/free-solid-svg-icons'
 import MovesList from './moves/MovesList'
 import BookMoves from './moves/BookMoves'
 import {trackEvent} from '../app/Analytics'
@@ -29,11 +29,31 @@ export default class ControlsContainer extends React.Component {
       super(props)
       this.state = {
           activeTab:'user',
-          activeGame:null
+          activeGame:null,
+          repertoireInput: React.createRef()
       }
       this.toggleModal = ()=>{
         this.setState({activeGame:null})
       }
+    }
+
+    handleRepertoireUpload = (event) => {
+        const file = event.target.files[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onload = (e) => {
+                this.props.openingGraph.loadRepertoire(e.target.result)
+                trackEvent(Constants.EVENT_CATEGORY_CONTROLS, "RepertoireUploaded")
+                this.props.showInfo("Repertoire loaded successfully")
+            }
+            reader.readAsText(file)
+        }
+        event.target.value = ''
+    }
+
+    triggerRepertoireUpload = (e) => {
+        e.stopPropagation()
+        this.state.repertoireInput.current.click()
     }
 
     launchGame(game) {
@@ -90,6 +110,13 @@ export default class ControlsContainer extends React.Component {
 
     render(){
         return <div>
+              <input
+                  type="file"
+                  ref={this.state.repertoireInput}
+                  style={{ display: 'none' }}
+                  onChange={this.handleRepertoireUpload}
+                  accept=".pgn"
+              />
               <Modal isOpen={this.state.activeGame} toggle={this.toggleModal}>
               <ModalHeader toggle={this.toggleModal}>Game details</ModalHeader>
               {!this.state.activeGame?null:
@@ -139,6 +166,16 @@ export default class ControlsContainer extends React.Component {
             onClick={() => { this.toggle('report'); }}
           >
             <FontAwesomeIcon icon={faChartBar} /> {this.state.activeTab === 'report'?"Report":""}
+          </NavLink>
+        </NavItem>
+        <NavItem>
+          <NavLink>
+            <FontAwesomeIcon
+                icon={faUpload}
+                className="pointer"
+                onClick={this.triggerRepertoireUpload}
+                title="Upload opening repertoire"
+            />
           </NavLink>
         </NavItem>
         <NavItem>

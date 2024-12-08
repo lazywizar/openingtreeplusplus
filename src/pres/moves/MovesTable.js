@@ -2,7 +2,7 @@ import React from 'react'
 import {Progress, Popover } from "reactstrap"
 import { Table, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@material-ui/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faExternalLinkAlt, faInfoCircle, faExclamationTriangle, faWrench } from '@fortawesome/free-solid-svg-icons'
+import { faExternalLinkAlt, faInfoCircle, faExclamationTriangle, faWrench, faCheckCircle } from '@fortawesome/free-solid-svg-icons'
 import ReportControls from '../ReportControls'
 import {Container, Row, Col} from 'reactstrap'
 import "react-step-progress-bar/styles.css";
@@ -24,8 +24,8 @@ export default class MovesTable extends React.Component {
     isTouchDevice() {
         return 'ontouchstart' in window;
     }
-      
-      
+
+
 
     componentDidUpdate(prevProps, prevState) {
         if(prevProps.turnColor !== this.props.turnColor) {
@@ -59,7 +59,7 @@ export default class MovesTable extends React.Component {
             e.stopPropagation()
         }
     }
-    
+
     compareClicked(san){
         return (e)=>{
             e.stopPropagation()
@@ -78,10 +78,10 @@ export default class MovesTable extends React.Component {
               percent={0}
               stepPositions={values}
             >
-                {this.getIndicator("./images/book.png", "12", "12", 
+                {this.getIndicator("./images/book.png", "12", "12",
                     this.constructAlt(this.props.compareToAlt,values),
                     this.compareClicked(currMove.san))}
-                {this.getIndicator("./images/user.png", "12", "12", 
+                {this.getIndicator("./images/user.png", "12", "12",
                     this.constructAlt(this.props.compareToAlt,values),
                     this.compareClicked(currMove.san))}
             </ProgressBar>
@@ -98,10 +98,10 @@ export default class MovesTable extends React.Component {
               percent={0}
               stepPositions={compareTo.values}
             >
-                {this.getIndicator("./images/arrow-white.png", "20", "16", 
+                {this.getIndicator("./images/arrow-white.png", "20", "16",
                     this.constructAlt(this.props.compareToAlt,compareTo.values),
                     this.compareClicked(currMove.san))}
-                {this.getIndicator("./images/arrow-black.png", "18", "14", 
+                {this.getIndicator("./images/arrow-black.png", "18", "14",
                     this.constructAlt(this.props.compareToAlt,compareTo.values),
                     this.compareClicked(currMove.san))}
             </ProgressBar>
@@ -135,8 +135,8 @@ export default class MovesTable extends React.Component {
         let openMove = this.props.movesToShow[moveIndex]
 
         return <Popover trigger="hover" placement="right" isOpen={performancePopoverOpen} target={`p${this.props.namespace}${moveIndex}`} toggle={this.togglePerformancePopover(moveIndex)}>
-                <ReportControls moveDetails={openMove.details} simplifiedView={true} 
-                isOpen = {performancePopoverOpen} launchGame={this.props.launchGame} 
+                <ReportControls moveDetails={openMove.details} simplifiedView={true}
+                isOpen = {performancePopoverOpen} launchGame={this.props.launchGame}
                 settings={this.props.settings} reportFooter ={this.reportFooter(moveIndex)}/>
             </Popover>
     }
@@ -185,10 +185,10 @@ export default class MovesTable extends React.Component {
         <TableRow>
             <TableCell size="small" className="smallCol"><b>Move</b></TableCell>
             <TableCell size="small" className="smallCol"><b>Games</b></TableCell>
-            <TableCell><b>Results</b><FontAwesomeIcon 
-                className={`floatRight pointer`} 
+            <TableCell><b>Results</b><FontAwesomeIcon
+                className={`floatRight pointer`}
                 icon={faWrench} onClick={this.toggleMovesSettings.bind(this)}/>
-                <MovesSettings isOpen={this.state.moveSettingsOpen} 
+                <MovesSettings isOpen={this.state.moveSettingsOpen}
                     toggle={this.toggleMovesSettings.bind(this)}
                     settingsChange={this.props.settingsChange}
                     updateSettings = {this.props.updateSettings}
@@ -203,7 +203,7 @@ export default class MovesTable extends React.Component {
             return lastPlayedGame && move.details.count === 1?
                 this.getSingleItemRow(move,lastPlayedGame):
                 this.getMultiItemRow(move, moveIndex)
-                
+
             }
         )}
     </TableBody>
@@ -225,12 +225,21 @@ export default class MovesTable extends React.Component {
         }
     }
     getMultiItemRow(move, moveIndex) {
-        return <TableRow className={`${this.props.highlightMove === move.san?'bgColor ':''}moveRow`} 
-                        key = {`m${move.orig}${move.dest}${move.san}`} 
-                        onClick={this.move(move.san)} 
-                        onMouseOver={this.highlightArrowFn(move).bind(this)} 
+        return <TableRow className={`${this.props.highlightMove === move.san?'bgColor ':''}moveRow`}
+                        key = {`m${move.orig}${move.dest}${move.san}`}
+                        onClick={this.move(move.san)}
+                        onMouseOver={this.highlightArrowFn(move).bind(this)}
                         onMouseOut={()=>this.props.highlightArrow(null)}>
-            <TableCell size="small" className="smallCol">{move.san} </TableCell>
+            <TableCell size="small" className="smallCol">
+                {move.san}
+                {move.isRecommended &&
+                    <FontAwesomeIcon
+                        className="leftPadding greenColor"
+                        icon={faCheckCircle}
+                        title="Recommended move in your repertoire"
+                    />
+                }
+            </TableCell>
             <TableCell size="small" id={`p${this.props.namespace}${moveIndex}`} className="smallCol" onClick ={this.togglePerformancePopover(moveIndex)}>
                 {simplifyCount(move.moveCount)}{this.getInfoIcon(moveIndex)}
                 {this.getPopover(moveIndex)}
@@ -258,12 +267,12 @@ export default class MovesTable extends React.Component {
 
     getInfoIcon(moveIndex) {
         if(this.getTranspositionWarningLevel(moveIndex) === "warning"){
-            return <FontAwesomeIcon 
-                className={`leftPadding redColor lowOpacity`} 
+            return <FontAwesomeIcon
+                className={`leftPadding redColor lowOpacity`}
                 icon={faExclamationTriangle}/>
         }
-        return <FontAwesomeIcon 
-            className={`lowOpacity leftPadding`} 
+        return <FontAwesomeIcon
+            className={`lowOpacity leftPadding`}
             icon={faInfoCircle}/>
 
     }
@@ -288,10 +297,10 @@ export default class MovesTable extends React.Component {
         let sampleResultBlack = playerDetails(lastPlayedGame.black, lastPlayedGame.blackElo)
         let sampleResult = lastPlayedGame.result
 
-        return <TableRow className={`${this.props.highlightMove === move.san?'bgColor ':''}moveRow`} 
-                key = {`${move.orig}${move.dest}`} 
+        return <TableRow className={`${this.props.highlightMove === move.san?'bgColor ':''}moveRow`}
+                key = {`${move.orig}${move.dest}`}
                 onClick={this.move(move.san)}
-                onMouseOver={this.highlightArrowFn(move).bind(this)} 
+                onMouseOver={this.highlightArrowFn(move).bind(this)}
                 onMouseOut={()=>this.props.highlightArrow(null)}>
                 <TableCell size="small" className="smallCol">{move.san}</TableCell>
                 <TableCell colSpan = "2">
