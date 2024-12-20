@@ -14,6 +14,33 @@ import {simplifyCount} from '../../app/util'
 import MovesSettings from './MovesSettings'
 
 export default class MovesTable extends React.Component {
+
+    movesTable() {
+        console.log("MovesTable props received:", {
+            bookMoves: this.props.bookMoves,
+            playerMoves: this.props.playerMoves,
+        });
+
+        return (
+            <MovesTable
+                movesToShow={this.props.playerMoves}
+                namespace="moves"
+                launchGame={this.props.launchGame}
+                settings={this.props.settings}
+                turnColor={this.props.turnColor}
+                onMove={this.props.onMove}
+                clickedEventName="MoveClicked"
+                tableFooter={this.tableFooter()}
+                highlightMove={this.props.highlightMove}
+                compareToClicked={this.props.switchToBookTab}
+                compareToAlt="Indicator for book moves - Click me"
+                settingsChange={this.props.settingsChange}
+                variant={this.props.variant}
+                highlightArrow={this.props.highlightArrow}
+            />
+        );
+    }
+
     constructor(props){
         super(props)
         this.state = {

@@ -23,10 +23,12 @@ import {trackEvent} from '../app/Analytics'
 import * as Constants from '../app/Constants'
 import ReportControls from './ReportControls'
 import { Table, TableRow, TableBody, TableCell } from '@material-ui/core'
+import { addStateManagement } from './StateManagement'
 
 export default class ControlsContainer extends React.Component {
     constructor(props){
       super(props)
+      addStateManagement(this)
       this.state = {
           activeTab:'user',
           activeGame:null,
@@ -226,18 +228,19 @@ export default class ControlsContainer extends React.Component {
         <TabPane tabId="book">
             <BookMoves
               bookMoves={this.props.bookMoves}
+              getPlayerMoves={this.props.getPlayerMoves}
               gameResults={this.props.bookResults}
               onMove={this.props.onMove}
               settings={this.props.settings}
               turnColor={this.props.turnColor}
               settingsChange={this.props.settingsChange}
-              launchGame = {this.launchGame.bind(this)}
+              launchGame={this.props.launchGame} //TODO: Check this later
               switchToMovesTab = {this.switchToMovesTab.bind(this)}
               highlightMove = {this.state.highlightBookMove}
               forceFetchBookMoves = {this.props.forceFetchBookMoves}
               variant={this.props.variant}
               highlightArrow={this.props.highlightArrow}
-              />
+            />
         </TabPane>
         <TabPane tabId="report">
           <ReportControls fen={this.props.fen} simplifiedView = {false}

@@ -10,7 +10,7 @@ export default class BookMove extends React.Component {
 
     render(){
         if(!this.props.bookMoves) {
-            return <div className = "infoMessage" >No book moves found in this position</div>
+            return <div className = "infoMessage" >Loading book moves...</div>
         }
         return <div>{(this.props.gameResults && this.props.gameResults.length>0)?this.resultsTable():null}
                 {this.movesTable()}</div>
@@ -41,11 +41,27 @@ export default class BookMove extends React.Component {
                            <Cached />)
         }
 
-        return <MovesTable movesToShow={this.props.bookMoves.moves} namespace='book'
+        // Get player moves to check which ones are recommended
+        const playerMoves = this.props.getPlayerMoves()
+        const bookMoves = this.props.bookMoves.moves.map(bookMove => {
+            // Find matching player move and check if it's recommended
+            const playerMove = playerMoves?.find(m => m.san === bookMove.san)
+            const isRecommended = playerMove?.isRecommended || false
+
+            return {
+                ...bookMove,
+                isRecommended,
+                // Preserve any other properties from player move that we might need
+                compareTo: playerMove?.compareTo,
+                level: playerMove?.level
+            }
+        })
+
+        return <MovesTable movesToShow={bookMoves} namespace='book'
                 launchGame={this.props.launchGame} settings={this.props.settings}
                 turnColor={this.props.turnColor} onMove={this.props.onMove}
                 clickedEventName="BookMoveClicked" tab="book" showAsPercentage
-                highlightMove={this.props.highlightMove} 
+                highlightMove={this.props.highlightMove}
                 compareToClicked={this.props.switchToMovesTab}
                 compareToAlt="Indicator for player moves - Click me"
                 settingsChange={this.props.settingsChange}

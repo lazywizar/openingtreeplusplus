@@ -39,7 +39,7 @@ export default class MainContainer extends React.Component {
 
   constructor(props){
     super(props)
-  
+
     let urlVariant = new URLSearchParams(window.location.search).get("variant")
     let selectedVariant = urlVariant || Constants.VARIANT_STANDARD
     this.chess = chessLogic(selectedVariant)
@@ -73,7 +73,7 @@ export default class MainContainer extends React.Component {
     this.againstBrushes = ['blue','paleRed', 'paleRed', 'red']
     window.addEventListener('resize', this.handleResize.bind(this))
     let userProfile = UserProfile.getUserProfile()
-    initializeAnalytics(userProfile.userTypeDesc, this.state.settings.darkMode?"dark":"light", 
+    initializeAnalytics(userProfile.userTypeDesc, this.state.settings.darkMode?"dark":"light",
       this.state.settings.movesSettings.openingBookType)
 
   }
@@ -105,12 +105,12 @@ export default class MainContainer extends React.Component {
       }
       cookieManager.setLichessAccessToken(accessToken.token.value)
       console.log("access token", accessToken)
-      window.location.replace(clientUrl)      
+      window.location.replace(clientUrl)
     }).catch((error) => {
       console.log("error", error)
     })
-      
-    
+
+
 
   }
   handleResize() {
@@ -154,10 +154,12 @@ export default class MainContainer extends React.Component {
 
     let playerMoves = this.getPlayerMoves()
     let bookMoves = this.getBookMoves()
-    this.mergePlayerAndBookMoves(playerMoves, bookMoves)
+    if(bookMoves) {
+        this.mergePlayerAndBookMoves(playerMoves, bookMoves)
+    }
 
     return <div className="rootView">
-      <GlobalHeader settings={this.state.settings} 
+      <GlobalHeader settings={this.state.settings}
                     settingsChange={this.settingsChange.bind(this)}
                     toggleFeedback = {this.toggleFeedback(false)}/>
       <Container className="mainContainer">
@@ -165,7 +167,8 @@ export default class MainContainer extends React.Component {
           <Col lg={{order:0, size:2}} xs={{order:2}}>
             <Navigator fen = {this.state.fen} move={this.state.lastMove}
               onChange ={this.navigateTo.bind(this)}
-              variant = {this.state.variant} />
+              variant = {this.state.variant}
+              playerMoves={playerMoves} />
           </Col>
           <Col lg="6">
             <Chessground key={this.state.resize}
@@ -210,6 +213,7 @@ export default class MainContainer extends React.Component {
               forceFetchBookMoves={this.forceFetchBookMoves.bind(this)}
               highlightArrow={this.highlightArrow.bind(this)}
               oauthManager={this.oauth}
+              getPlayerMoves={this.getPlayerMoves.bind(this)}
             />
           </Col>
         </Row>
@@ -267,9 +271,15 @@ export default class MainContainer extends React.Component {
 
   componentDidMount() {
       handleDarkMode(this.state.settings.darkMode);
-      
+
       // hack to fix https://github.com/openingtree/openingtree/issues/243
       // refreshing the chessboard after its initial render seems to fix this issue
       setImmediate(this.handleResize.bind(this))
+  }
+
+  getPlayerMoves() {
+    let moves = this.state.openingGraph.movesForFen(this.state.fen)
+    console.log("Moves from OpeningGraph:", JSON.parse(JSON.stringify(moves)))
+    return moves
   }
 }

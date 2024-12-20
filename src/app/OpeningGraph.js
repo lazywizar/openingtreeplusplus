@@ -242,6 +242,10 @@ export default class OpeningGraph {
     }
     movesForFen(fullFen) {
         let fen = simplifiedFen(fullFen)
+        let chess = chessLogic(this.variant, fullFen)
+        let isWhiteToMove = chess.turn() === 'w'
+
+        // Get recommended moves for both sides
         let recommendedMove = this.repertoire.get(fen)
 
         var currNode = this.graph.nodes.get(fen)
@@ -252,28 +256,28 @@ export default class OpeningGraph {
                 let chess = chessLogic(this.variant, fullFen)
                 let move = chess.move(entry[0], {sloppy: true})
                 if(!move) {
-                    // certain moves are not legal because of transposition
-                    // like en passant. fail safely in those cases. issue #306
+                    console.warn("Failed to make move:", entry[0], "in position:", fullFen)
                     return null;
                 }
                 let targetNodeDetails = this.getDetailsForFen(chess.fen())
-                return {
-                    orig:move.from,
-                    dest:move.to,
-                    level:this.levelFor(entry[1], currNode.playedByMax),
-                    san:move.san,
-                    details:targetNodeDetails,
+                let moveObj = {
+                    orig: move.from,
+                    dest: move.to,
+                    level: this.levelFor(entry[1], currNode.playedByMax),
+                    san: move.san,
+                    details: targetNodeDetails,
                     moveCount: entry[1],
                     isRecommended: move.san === recommendedMove
-                }
-            }).filter(e=>!!e) // filter out moves that are null because of issue #306
+                };
+                return moveObj;
+            }).filter(e=>!!e)
         }
 
         if(recommendedMove && !moves.find(m => m.san === recommendedMove)) {
             let chess = chessLogic(this.variant, fullFen)
             let move = chess.move(recommendedMove, {sloppy: true})
             if(move) {
-                moves.push({
+                let moveObj = {
                     orig: move.from,
                     dest: move.to,
                     level: 1,
@@ -281,7 +285,10 @@ export default class OpeningGraph {
                     details: emptyDetails(),
                     moveCount: 0,
                     isRecommended: true
-                })
+                };
+                moves.push(moveObj)
+            } else {
+                console.warn("Failed to add recommended move:", recommendedMove, "in position:", fullFen)
             }
         }
 
@@ -300,23 +307,42 @@ export default class OpeningGraph {
 
     loadRepertoire(pgnContent) {
         let chess = chessLogic(this.variant)
+        console.log("Loading repertoire from PGN content:", pgnContent)
+        this.repertoire.clear() // Clear existing repertoire
 
         // Parse PGN and process each move
         let lines = pgnContent.split('\n')
 
-        lines.forEach(line => {
+        lines.forEach((line, index) => {
             if(line.trim().startsWith('1.')) { // New variation
                 chess.reset()
-                let moves = line.trim().split(/\s+/)
-                moves.forEach(moveText => {
-                    if(moveText.match(/^\d+\./)) return // Skip move numbers
 
-                    let currentFen = chess.fen()
+                // Split into moves but keep move numbers
+                let moves = line.trim().split(/\s+/)
+                let moveNumber = 1
+                let position = null
+
+                for(let i = 0; i < moves.length; i++) {
+                    let moveText = moves[i]
+
+                    // Skip move numbers but use them to track whose move it is
+                    if(moveText.match(/^\d+\./)) {
+                        moveNumber = parseInt(moveText)
+                        continue
+                    }
+
+                    // Store current position before making move
+                    position = chess.fen()
+                    let simplifiedCurrentFen = simplifiedFen(position)
+
                     let move = chess.move(moveText, {sloppy: true})
                     if(move) {
-                        this.addRepertoireMove(currentFen, move.san)
+                        // Store the move as recommended for the current position
+                        this.repertoire.set(simplifiedCurrentFen, move.san)
+                    } else {
+                        console.warn("Failed to make move:", moveText)
                     }
-                })
+                }
             }
         })
     }
@@ -328,7 +354,8 @@ export default class OpeningGraph {
 
     getRepertoireMove(fullFen) {
         let fen = simplifiedFen(fullFen)
-        return this.repertoire.get(fen)
+        let move = this.repertoire.get(fen)
+        return move
     }
 
 }

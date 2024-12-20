@@ -1,3 +1,4 @@
+import React from 'react'
 import * as Constants from '../app/Constants'
 import {trackEvent} from '../app/Analytics'
 import {copyText} from './loader/Common'
@@ -307,49 +308,62 @@ function variantChange(newVariant) {
 //  2. store them in openinggraph
 //  3. update the component so that getBookMoves gets called again
 function getBookMoves() {
-    let moves = this.state.openingGraph.getBookNode(this.chess.fen())
     if(this.state.settings.movesSettings.openingBookType === Constants.OPENING_BOOK_TYPE_OFF) {
         return {fetch:'off'}
     }
 
+    // First check if we have moves in the opening graph
+    let moves = this.state.openingGraph.getBookNode(this.chess.fen())
     if(!moves) {
+        // If not, trigger a fetch
         moves = this.forceFetchBookMoves()
     }
     return moves
 }
 
 function forceFetchBookMoves() {
-    let moves = fetchBookMoves(this.state.fen, this.state.variant, this.state.settings.movesSettings, (moves)=>{
-        this.state.openingGraph.addBookNode(this.chess.fen(), moves)
-        this.setState({update:this.state.update+1})
+    // Start the fetch but don't add the moves yet
+    let moves = fetchBookMoves(this.state.fen, this.state.variant, this.state.settings.movesSettings, (fetchedMoves)=>{
+        // Only add the moves once they're actually fetched
+        if (fetchedMoves && fetchedMoves.moves) {
+            // Only add to book nodes, not to state
+            this.state.openingGraph.addBookNode(this.chess.fen(), fetchedMoves)
+            this.setState({
+                update: this.state.update + 1
+            })
+        }
     })
-    this.state.openingGraph.addBookNode(this.chess.fen(), moves)
-    setImmediate(()=>this.setState({update:this.state.update+1}))
-    return moves
+
+    // Return a pending state while we wait for the moves
+    return { fetch: 'pending' }
 }
 
 function mergePlayerAndBookMoves(playerMovesToShow, bookMovesToShow) {
-    if(!playerMovesToShow) {
-        return
+    if (!playerMovesToShow) {
+        return;
     }
-    let bookMovesMap = createMap(bookMovesToShow.moves)
-    playerMovesToShow.forEach((move)=>{
-        let bookMove = bookMovesMap.get(move.san)
-        if(!bookMove) {
-            return
+    let bookMovesMap = createMap(bookMovesToShow?.moves);
+    playerMovesToShow.forEach((move) => {
+        let originalMove = { ...move };
+        let bookMove = bookMovesMap.get(move.san);
+
+        if (!bookMove) {
+            return;
         }
-        move.compareTo = {
-            bookScore:getCompareScores(bookMove),
-            userScore:getCompareScores(move),
-            values:getCompareToValues(bookMove)
-        }
-        bookMove.compareTo = {
-            bookScore:getCompareScores(bookMove),
-            userScore:getCompareScores(move),
-            values:getCompareToValues(move)
-        }
-    })
+
+        // Preserve the original isRecommended flag from the player move
+        Object.assign(move, {
+            ...bookMove,
+            isRecommended: originalMove.isRecommended,
+            compareTo: {
+                bookScore: getCompareScores(bookMove),
+                userScore: getCompareScores(move),
+                values: getCompareToValues(bookMove),
+            }
+        });
+    });
 }
+
 function getCompareScores(move){
     return (move.details.whiteWins+move.details.draws/2)/move.details.count*100
 }
@@ -370,7 +384,6 @@ function createMap(movesToShow){
     return map
 }
 
-
 function addStateManagement(obj){
     obj.orientation  = orientation
     obj.turnColor = turnColor
@@ -387,7 +400,7 @@ function addStateManagement(obj){
     obj.fillArray = fillArray
     obj.brushes = brushes
     obj.moveToShape = moveToShape
-    obj.getPlayerMoves = getPlayerMoves
+    obj.getPlayerMoves = getPlayerMoves.bind(obj)
     obj.gameResults = gameResults
     obj.showError = showError
     obj.showInfo = showInfo

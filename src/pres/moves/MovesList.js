@@ -8,7 +8,7 @@ export default class MovesList extends React.Component {
 
     render(){
         if(!this.props.playerMoves) {
-            return <div className = "infoMessage" >No moves to show. Please select a source from the 
+            return <div className = "infoMessage" >No moves to show. Please select a source from the
                 <span className = "navLinkButton" onClick={()=>this.props.switchToUserTab()}> <FontAwesomeIcon icon={faUser} /> User</span> tab and enter the details.</div>
         }
         return <div>{(this.props.gameResults && this.props.gameResults.length>0)?this.resultsTable():null}
@@ -16,17 +16,22 @@ export default class MovesList extends React.Component {
     }
 
     movesTable() {
-        return <MovesTable movesToShow={this.props.playerMoves} namespace='moves'
-                launchGame={this.props.launchGame} settings={this.props.settings}
-                turnColor={this.props.turnColor} onMove={this.props.onMove}
-                clickedEventName="MoveClicked" tableFooter={this.tableFooter()}
-                highlightMove={this.props.highlightMove} 
-                compareToClicked={this.props.switchToBookTab}
-                compareToAlt="Indicator for book moves - Click me"
-                settingsChange={this.props.settingsChange}
-                variant={this.props.variant}
-                highlightArrow={this.props.highlightArrow}
-                />
+        return <MovesTable
+            movesToShow={this.props.playerMoves}
+            namespace='moves'
+            launchGame={this.props.launchGame}
+            settings={this.props.settings}
+            turnColor={this.props.turnColor}
+            onMove={this.props.onMove}
+            clickedEventName="MoveClicked"
+            tableFooter={this.tableFooter()}
+            highlightMove={this.props.highlightMove}
+            compareToClicked={this.props.switchToBookTab}
+            compareToAlt="Indicator for book moves - Click me"
+            settingsChange={this.props.settingsChange}
+            variant={this.props.variant}
+            highlightArrow={this.props.highlightArrow}
+        />
     }
     resultsTable() {
         return <ResultsTable gameResults={this.props.gameResults}
@@ -38,11 +43,11 @@ export default class MovesList extends React.Component {
         if(this.props.settings.playerName) {
             if(hasMoves) {
                 return <span>
-                    Showing moves that have been  played {this.props.turnColor === this.props.settings.playerColor? "by" : "by others against"} <b>{this.props.settings.playerName}</b> in 
+                    Showing moves that have been  played {this.props.turnColor === this.props.settings.playerColor? "by" : "by others against"} <b>{this.props.settings.playerName}</b> in
                     this position. <b>{this.props.settings.playerName}</b> is playing as <b>{this.props.settings.playerColor}</b>.
                     </span>
             } else {
-                return <span>No moves found played by {this.props.turnColor === this.props.settings.playerColor? "by" : "by others against"} <b>{this.props.settings.playerName}</b> in 
+                return <span>No moves found played by {this.props.turnColor === this.props.settings.playerColor? "by" : "by others against"} <b>{this.props.settings.playerName}</b> in
                     this position. <b>{this.props.settings.playerName}</b> is playing as <b>{this.props.settings.playerColor}</b>.</span>
             }
         } else {

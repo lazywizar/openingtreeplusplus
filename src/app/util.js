@@ -10,15 +10,13 @@ export function createSubObjectWithProperties(mainObject, properties) {
 }
 export function simplifiedFen(fen) {
     let fenComponents = fen.split(' ')
-    if(fenComponents.length <=4) {
-        return fen
-    }
-    //exclude move and halfMove components
-    return `${fenComponents[0]} ${fenComponents[1]} ${fenComponents[2]}`
+    // Only use piece placement and side to move, ignore castling rights,
+    // en passant square, and move counters for consistent position comparison
+    return `${fenComponents[0]} ${fenComponents[1]}`
 }
 
 export function getTimeControlsArray(site,timeControlState, selected) {
-    let allTimeControls = site === Constants.SITE_LICHESS ? 
+    let allTimeControls = site === Constants.SITE_LICHESS ?
         Common.LICHESS_TIME_CONTROLS : Common.CHESS_DOT_COM_TIME_CONTROLS
     return allTimeControls.filter((timeControl)=>!!timeControlState[timeControl] === selected)
 }
@@ -26,7 +24,7 @@ export function getTimeControlsArray(site,timeControlState, selected) {
 export function simplifyCount(count){
     if(count>=1000000){
         return `${(count/1000000).toFixed(1)}M`
-    }        
+    }
     if(count>=10000){
         return `${Math.round(count/1000)}k`
     }
@@ -70,6 +68,6 @@ export function isDateMoreRecentThan(date, than) {
     }
     if(!date) {
         return true
-    } 
+    }
     return new Date(date)>new Date(than)
 }
