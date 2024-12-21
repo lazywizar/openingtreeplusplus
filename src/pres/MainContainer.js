@@ -29,6 +29,7 @@ import cookieManager from '../app/CookieManager'
 import UserProfile, { USER_PROFILE_NEW_USER } from '../app/UserProfile'
 import {initializeAnalytics} from '../app/Analytics'
 import { fetchBookMoves } from '../app/OpeningBook'
+import { handleDarkMode } from './DarkMode'
 
 import Navigator from './Navigator'
 import GlobalHeader from './GlobalHeader'
@@ -84,6 +85,7 @@ export default class MainContainer extends React.Component {
   componentDidMount() {
     this._isMounted = true;
     window.addEventListener('resize', this.handleResize);
+    handleDarkMode(this.state.settings.darkMode);
   }
 
   componentWillUnmount() {
@@ -216,7 +218,7 @@ export default class MainContainer extends React.Component {
   render() {
     const playerMoves = this.getPlayerMoves()
     let shapes = [];
-    
+
     if (this.state.highlightedMove && typeof this.state.highlightedMove === 'string') {
       shapes = [{
         orig: this.state.highlightedMove.substring(0, 2),
@@ -247,7 +249,7 @@ export default class MainContainer extends React.Component {
           </Col>
           <Col lg="6">
             <div style={{ width: this.chessboardWidth, height: this.chessboardWidth }}>
-              <Chessground 
+              <Chessground
                 key={`${this.state.resize}-${this.state.boardKey}`}
                 width={this.chessboardWidth}
                 height={this.chessboardWidth}
