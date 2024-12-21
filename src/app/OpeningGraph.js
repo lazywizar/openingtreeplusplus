@@ -8,6 +8,7 @@ export default class OpeningGraph {
         this.hasMoves = false
         this.variant = variant
         this.repertoire = new Map()
+        this.repertoireColor = null
     }
     setEntries(arrayEntries, pgnStats){
         this.graph=new Graph(arrayEntries, pgnStats)
@@ -111,9 +112,18 @@ export default class OpeningGraph {
         if(!book || !book.moves) {
             return book
         }
+        
+        // Filter moves based on repertoire color
+        let filteredMoves = book.moves.filter(move => {
+            let chess = chessLogic(this.variant)
+            let isWhiteMove = chess.turn() === 'w'
+            return (isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_WHITE) ||
+                   (!isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_BLACK)
+        })
+
         return {
             fetch:"success",
-            moves:book.moves.map((move)=>{
+            moves:filteredMoves.map((move)=>{
                 let count = move.black+move.white+move.draws
                 return {
                     san:move.san,
@@ -245,14 +255,18 @@ export default class OpeningGraph {
         let chess = chessLogic(this.variant, fullFen)
         let isWhiteToMove = chess.turn() === 'w'
 
-        // Get recommended moves for both sides
-        let recommendedMove = this.repertoire.get(fen)
+        // Only get recommended moves if it's the repertoire color's turn
+        let recommendedMove = null
+        if ((isWhiteToMove && this.repertoireColor === Constants.PLAYER_COLOR_WHITE) ||
+            (!isWhiteToMove && this.repertoireColor === Constants.PLAYER_COLOR_BLACK)) {
+            recommendedMove = this.repertoire.get(fen)
+        }
 
         var currNode = this.graph.nodes.get(fen)
         let moves = []
 
         if(currNode && currNode.playedBy) {
-            moves = Array.from(Object.entries(currNode.playedBy)).map((entry)=> {
+            moves = Object.entries(currNode.playedBy).map(entry => {
                 let chess = chessLogic(this.variant, fullFen)
                 let move = chess.move(entry[0], {sloppy: true})
                 if(!move) {
@@ -263,7 +277,6 @@ export default class OpeningGraph {
                 let moveObj = {
                     orig: move.from,
                     dest: move.to,
-                    level: this.levelFor(entry[1], currNode.playedByMax),
                     san: move.san,
                     details: targetNodeDetails,
                     moveCount: entry[1],
@@ -273,6 +286,7 @@ export default class OpeningGraph {
             }).filter(e=>!!e)
         }
 
+        // Add recommended move if it's not in the moves list
         if(recommendedMove && !moves.find(m => m.san === recommendedMove)) {
             let chess = chessLogic(this.variant, fullFen)
             let move = chess.move(recommendedMove, {sloppy: true})
@@ -280,7 +294,6 @@ export default class OpeningGraph {
                 let moveObj = {
                     orig: move.from,
                     dest: move.to,
-                    level: 1,
                     san: move.san,
                     details: emptyDetails(),
                     moveCount: 0,
@@ -295,23 +308,15 @@ export default class OpeningGraph {
         return moves
     }
 
-    levelFor(moveCount, maxCount){
-        if(maxCount <= 0 ||moveCount/maxCount > 0.8) {
-            return 3
-        }
-        if(moveCount/maxCount>0.3) {
-            return 2
-        }
-        return 1
-    }
+    loadRepertoire(pgnContent, color) {
+        // Clear existing repertoire and book nodes
+        this.repertoire.clear()
+        this.clearBookNodes()
+        this.repertoireColor = color
 
-    loadRepertoire(pgnContent) {
-        let chess = chessLogic(this.variant)
-        console.log("Loading repertoire from PGN content:", pgnContent)
-        this.repertoire.clear() // Clear existing repertoire
-
-        // Parse PGN and process each move
+        // Split into lines
         let lines = pgnContent.split('\n')
+        let chess = chessLogic(this.variant)
 
         lines.forEach((line, index) => {
             if(line.trim().startsWith('1.')) { // New variation
@@ -320,7 +325,7 @@ export default class OpeningGraph {
                 // Split into moves but keep move numbers
                 let moves = line.trim().split(/\s+/)
                 let moveNumber = 1
-                let position = null
+                let position = ''
 
                 for(let i = 0; i < moves.length; i++) {
                     let moveText = moves[i]
@@ -337,8 +342,12 @@ export default class OpeningGraph {
 
                     let move = chess.move(moveText, {sloppy: true})
                     if(move) {
-                        // Store the move as recommended for the current position
-                        this.repertoire.set(simplifiedCurrentFen, move.san)
+                        // Only store moves for the selected color
+                        let isWhiteMove = chess.turn() === 'b' // If black to move, white just moved
+                        if ((isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_WHITE) ||
+                            (!isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_BLACK)) {
+                            this.repertoire.set(simplifiedCurrentFen, move.san)
+                        }
                     } else {
                         console.warn("Failed to make move:", moveText)
                     }

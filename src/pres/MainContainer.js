@@ -1,7 +1,7 @@
 import React from 'react'
 import Chessground from 'react-chessground'
 import 'react-chessground/dist/styles/chessground.css'
-import { AccessContext, HttpClient, OAuth2AuthCodePKCE } from '@bity/oauth2-auth-code-pkce';
+import { OAuth2AuthCodePKCE } from '@bity/oauth2-auth-code-pkce';
 
 import {
   Button,
@@ -29,6 +29,7 @@ import cookieManager from '../app/CookieManager'
 import { handleDarkMode } from '../pres/DarkMode';
 import UserProfile, { USER_PROFILE_NEW_USER } from '../app/UserProfile'
 import {initializeAnalytics} from '../app/Analytics'
+import { fetchBookMoves } from '../app/OpeningBook'
 
 import Navigator from './Navigator'
 import GlobalHeader from './GlobalHeader'
@@ -62,20 +63,40 @@ export default class MainContainer extends React.Component {
         feedbackOpen:false,
         diagnosticsDataOpen:false,
         variant:selectedVariant,
-        update:0,//increase count to force update the component
-        highlightedMove:null
-      }
+        update:0,
+        highlightedMove:null,
+        boardKey: 0
+    }
     this.chessboardWidth = this.getChessboardWidth()
+    this.pendingBookMoves = new Map()
+    this._isMounted = false
 
     this.initializeOauth()
 
     this.forBrushes = ['blue','paleGrey', 'paleGreen', 'green']
     this.againstBrushes = ['blue','paleRed', 'paleRed', 'red']
-    window.addEventListener('resize', this.handleResize.bind(this))
+    this.handleResize = this.handleResize.bind(this)
+    window.addEventListener('resize', this.handleResize)
     let userProfile = UserProfile.getUserProfile()
     initializeAnalytics(userProfile.userTypeDesc, this.state.settings.darkMode?"dark":"light",
       this.state.settings.movesSettings.openingBookType)
+  }
 
+  componentDidMount() {
+    this._isMounted = true;
+    window.addEventListener('resize', this.handleResize);
+  }
+
+  componentWillUnmount() {
+    this._isMounted = false;
+    window.removeEventListener('resize', this.handleResize);
+    // Cleanup pending book moves
+    this.pendingBookMoves.forEach(controller => {
+      if (controller) {
+        controller.abort();
+      }
+    });
+    this.pendingBookMoves.clear();
   }
 
   initializeOauth() {
@@ -109,13 +130,14 @@ export default class MainContainer extends React.Component {
     }).catch((error) => {
       console.log("error", error)
     })
-
-
-
   }
+
   handleResize() {
-    this.setState({resize:this.state.resize+1})
-    this.chessboardWidth = this.getChessboardWidth()
+    if (!this._isMounted) return;
+    this.chessboardWidth = this.getChessboardWidth();
+    this.setState(state => ({
+      resize: state.resize + 1
+    }));
   }
 
   getMovesSettingsFromCookie() {
@@ -148,11 +170,65 @@ export default class MainContainer extends React.Component {
     return darkModeCookie === 'true';
   }
 
+  forceFetchBookMoves() {
+    // Cancel any existing fetch for this position
+    const existingController = this.pendingBookMoves.get(this.state.fen)
+    if (existingController) {
+      existingController.abort()
+      this.pendingBookMoves.delete(this.state.fen)
+    }
+
+    // Create new abort controller for this fetch
+    const controller = new AbortController()
+    this.pendingBookMoves.set(this.state.fen, controller)
+
+    // Start the fetch but don't add the moves yet
+    let moves = fetchBookMoves(
+      this.state.fen,
+      this.state.variant,
+      this.state.settings.movesSettings,
+      (fetchedMoves) => {
+        if (!this._isMounted) return
+        // Only add the moves once they're actually fetched
+        if (fetchedMoves && fetchedMoves.moves) {
+          this.state.openingGraph.addBookNode(this.chess.fen(), fetchedMoves)
+          this.setState({
+            update: this.state.update + 1
+          })
+        }
+        this.pendingBookMoves.delete(this.state.fen)
+      },
+      controller.signal
+    )
+
+    // Return a pending state while we wait for the moves
+    return { fetch: 'pending' }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    // If FEN changes, increment boardKey to force clean remount
+    if (prevState.fen !== this.state.fen) {
+      this.setState(state => ({
+        boardKey: state.boardKey + 1
+      }))
+    }
+  }
+
   render() {
+    const playerMoves = this.getPlayerMoves()
+    let shapes = [];
+    
+    if (this.state.highlightedMove && typeof this.state.highlightedMove === 'string') {
+      shapes = [{
+        orig: this.state.highlightedMove.substring(0, 2),
+        dest: this.state.highlightedMove.substring(2, 4),
+        brush: 'paleBlue'
+      }];
+    }
+
     let lastMoveArray = this.state.lastMove ? [this.state.lastMove.from, this.state.lastMove.to] : null
     let snackBarOpen = Boolean(this.state.message)
 
-    let playerMoves = this.getPlayerMoves()
     let bookMoves = this.getBookMoves()
     if(bookMoves) {
         this.mergePlayerAndBookMoves(playerMoves, bookMoves)
@@ -171,22 +247,28 @@ export default class MainContainer extends React.Component {
               playerMoves={playerMoves} />
           </Col>
           <Col lg="6">
-            <Chessground key={this.state.resize}
-              height={this.chessboardWidth}
-              width={this.chessboardWidth}
-              orientation={this.orientation()}
-              turnColor={this.turnColor()}
-              movable={this.calcMovable()}
-              lastMove={lastMoveArray}
-              fen={this.state.fen}
-              onMove={this.onMoveAction.bind(this)}
-              drawable ={{
-                enabled: true,
-                visible: true,
-                autoShapes: this.autoShapes(playerMoves, this.state.highlightedMove)
-              }}
-              style={{ margin: 'auto' }}
-            />
+            <div style={{ width: this.chessboardWidth, height: this.chessboardWidth }}>
+              <Chessground 
+                key={`${this.state.resize}-${this.state.boardKey}`}
+                width={this.chessboardWidth}
+                height={this.chessboardWidth}
+                orientation={this.orientation()}
+                turnColor={this.turnColor()}
+                movable={this.calcMovable()}
+                lastMove={lastMoveArray}
+                fen={this.state.fen}
+                onMove={this.onMoveAction.bind(this)}
+                animation={{ enabled: true, duration: 150 }}
+                drawable={{
+                  enabled: true,
+                  visible: true,
+                  autoShapes: shapes || [],
+                  brushes: {
+                    paleBlue: { key: 'b', color: '#003088', opacity: 0.4, lineWidth: 10 }
+                  }
+                }}
+              />
+            </div>
           </Col>
           <Col lg="4" className="paddingTop">
             <ControlsContainer fen={this.state.fen}
@@ -267,14 +349,6 @@ export default class MainContainer extends React.Component {
         </ModalFooter>
       </Modal>
     </div>
-  }
-
-  componentDidMount() {
-      handleDarkMode(this.state.settings.darkMode);
-
-      // hack to fix https://github.com/openingtree/openingtree/issues/243
-      // refreshing the chessboard after its initial render seems to fix this issue
-      setImmediate(this.handleResize.bind(this))
   }
 
   getPlayerMoves() {

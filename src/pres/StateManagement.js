@@ -1,4 +1,3 @@
-import React from 'react'
 import * as Constants from '../app/Constants'
 import {trackEvent} from '../app/Analytics'
 import {copyText} from './loader/Common'
@@ -86,6 +85,9 @@ function updateProcessedGames(downloadLimit, n, parsedGame) {
     return (totalGamesProcessed < downloadLimit || downloadLimit>=Constants.MAX_DOWNLOAD_LIMIT)&& this.state.downloadingGames
 }
 function moveToShape(move) {
+    if (!move || !move.orig) {
+        return null;
+    }
     return {
         orig:move.orig,
                     dest: move.dest !== move.orig? move.dest:null,
@@ -99,22 +101,31 @@ function autoShapes(moves, highlightedMove) {
         if(!highlightedMove.orig || !highlightedMove.dest) {
             let chess = chessLogic(this.state.variant, this.state.fen)
             let move = chess.move(highlightedMove.san)
-            highlightedMove.orig=move.from
-            highlightedMove.dest=move.to
+            if (move) {
+                highlightedMove.orig = move.from
+                highlightedMove.dest = move.to
+            }
         }
-        highlightedMove.level = 0
-        shapes.push(this.moveToShape(highlightedMove))
+        if (highlightedMove.orig) {
+            highlightedMove.level = 0
+            let shape = this.moveToShape(highlightedMove)
+            if (shape) {
+                shapes.push(shape)
+            }
+        }
     }
-    if(moves) {
-        shapes = shapes.concat(moves.filter((m)=>{
-            if(!highlightedMove) {
-                return true
-            }
-            if (highlightedMove.orig === m.orig && highlightedMove.dest === m.dest) {
-                return false
-            }
-            return true
-        }).map(this.moveToShape.bind(this)))
+    if (moves) {
+        let validMoves = moves.filter((m) => {
+            if (!m || !m.orig) return false;
+            if (!highlightedMove) return true;
+            return !(highlightedMove.orig === m.orig && highlightedMove.dest === m.dest);
+        })
+
+        let moveShapes = validMoves
+            .map(this.moveToShape.bind(this))
+            .filter(shape => shape !== null)
+
+        shapes = shapes.concat(moveShapes)
     }
     maxArrowsDrawn = Math.max(maxArrowsDrawn, shapes.length)
     return this.fillArray(shapes,  maxArrowsDrawn)

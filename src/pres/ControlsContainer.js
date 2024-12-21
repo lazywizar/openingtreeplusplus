@@ -7,6 +7,11 @@ import {
   Modal,
   ModalFooter,
   ModalHeader,
+  ModalBody,
+  FormGroup,
+  Label,
+  ButtonGroup,
+  Button as RButton,
   Nav,
   NavItem,
   NavLink,
@@ -32,7 +37,9 @@ export default class ControlsContainer extends React.Component {
       this.state = {
           activeTab:'user',
           activeGame:null,
-          repertoireInput: React.createRef()
+          repertoireInput: React.createRef(),
+          showRepertoireModal: false,
+          repertoireColor: Constants.PLAYER_COLOR_WHITE
       }
       this.toggleModal = ()=>{
         this.setState({activeGame:null})
@@ -44,13 +51,24 @@ export default class ControlsContainer extends React.Component {
         if (file) {
             const reader = new FileReader()
             reader.onload = (e) => {
-                this.props.openingGraph.loadRepertoire(e.target.result)
+                this.props.openingGraph.loadRepertoire(e.target.result, this.state.repertoireColor)
                 trackEvent(Constants.EVENT_CATEGORY_CONTROLS, "RepertoireUploaded")
-                this.props.showInfo("Repertoire loaded successfully")
+                this.props.showInfo(`${this.state.repertoireColor === Constants.PLAYER_COLOR_WHITE ? "White" : "Black"} repertoire loaded successfully`)
+                this.setState({ showRepertoireModal: false })
             }
             reader.readAsText(file)
         }
         event.target.value = ''
+    }
+
+    toggleRepertoireModal = () => {
+        this.setState(prevState => ({
+            showRepertoireModal: !prevState.showRepertoireModal
+        }))
+    }
+
+    handleColorSelect = (color) => {
+        this.setState({ repertoireColor: color })
     }
 
     triggerRepertoireUpload = (e) => {
@@ -117,7 +135,7 @@ export default class ControlsContainer extends React.Component {
                   ref={this.state.repertoireInput}
                   style={{ display: 'none' }}
                   onChange={this.handleRepertoireUpload}
-                  accept=".pgn"
+                  accept=".txt,.pgn"
               />
               <Modal isOpen={this.state.activeGame} toggle={this.toggleModal}>
               <ModalHeader toggle={this.toggleModal}>Game details</ModalHeader>
@@ -137,6 +155,38 @@ export default class ControlsContainer extends React.Component {
           <Button color="secondary" onClick={this.toggleModal}>Done</Button>
         </ModalFooter>
               </Modal>
+              <Modal isOpen={this.state.showRepertoireModal} toggle={this.toggleRepertoireModal}>
+                <ModalHeader toggle={this.toggleRepertoireModal}>Upload Opening Repertoire</ModalHeader>
+                <ModalBody>
+                    <FormGroup>
+                        <Label>Select Repertoire Color</Label>
+                        <div>
+                            <ButtonGroup>
+                                <RButton 
+                                    color={this.state.repertoireColor === Constants.PLAYER_COLOR_WHITE ? "primary" : "secondary"}
+                                    onClick={() => this.handleColorSelect(Constants.PLAYER_COLOR_WHITE)}
+                                >
+                                    White
+                                </RButton>
+                                <RButton 
+                                    color={this.state.repertoireColor === Constants.PLAYER_COLOR_BLACK ? "primary" : "secondary"}
+                                    onClick={() => this.handleColorSelect(Constants.PLAYER_COLOR_BLACK)}
+                                >
+                                    Black
+                                </RButton>
+                            </ButtonGroup>
+                        </div>
+                    </FormGroup>
+                    <FormGroup>
+                        <Label>Select Repertoire File</Label>
+                        <div>
+                            <RButton color="primary" onClick={this.triggerRepertoireUpload}>
+                                Choose File
+                            </RButton>
+                        </div>
+                    </FormGroup>
+                </ModalBody>
+            </Modal>
             <Nav tabs>
         <NavItem>
           <NavLink
@@ -175,7 +225,7 @@ export default class ControlsContainer extends React.Component {
             <FontAwesomeIcon
                 icon={faUpload}
                 className="pointer"
-                onClick={this.triggerRepertoireUpload}
+                onClick={this.toggleRepertoireModal}
                 title="Upload opening repertoire"
             />
           </NavLink>
