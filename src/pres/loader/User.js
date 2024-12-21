@@ -33,6 +33,23 @@ export default class User extends BaseComponent {
         }
     }
 
+    static getDerivedStateFromProps(props, state) {
+        // Only sync these specific props to state
+        const updates = {};
+        let hasUpdates = false;
+
+        if (props.selectedPlayer !== state.selectedPlayer) {
+            updates.selectedPlayer = props.selectedPlayer;
+            hasUpdates = true;
+        }
+        if (props.selectedEvent !== state.selectedEvent) {
+            updates.selectedEvent = props.selectedEvent;
+            hasUpdates = true;
+        }
+
+        return hasUpdates ? updates : null;
+    }
+
     handlePropChange(key, value) {
         if (key === 'gamesProcessed' && value > 0) {
             this.setState({isGamesSubsectionOpen: true});
