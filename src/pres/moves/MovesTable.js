@@ -252,6 +252,7 @@ export default class MovesTable extends React.Component {
         }
     }
     getMultiItemRow(move, moveIndex) {
+        const showStats = move.moveCount > 0;
         return <TableRow className={`${this.props.highlightMove === move.san?'bgColor ':''}moveRow`}
                         key = {`m${move.orig}${move.dest}${move.san}`}
                         onClick={this.move(move.san)}
@@ -268,26 +269,32 @@ export default class MovesTable extends React.Component {
                 }
             </TableCell>
             <TableCell size="small" id={`p${this.props.namespace}${moveIndex}`} className="smallCol" onClick ={this.togglePerformancePopover(moveIndex)}>
-                {simplifyCount(move.moveCount)}{this.getInfoIcon(moveIndex)}
-                {this.getPopover(moveIndex)}
+                {showStats ? (
+                    <>
+                        {simplifyCount(move.moveCount)}{this.getInfoIcon(moveIndex)}
+                        {this.getPopover(moveIndex)}
+                    </>
+                ) : null}
             </TableCell>
             <TableCell>
-                <Container>
-                {this.props.settings.movesSettings.openingBookScoreIndicator?
-                <Row className="scoresProgress"><Col className="navCol">
-                {this.compareScores(move)}
-                </Col></Row>:null}
-                <Row><Col className="navCol">
-                <Progress className = "border" multi>
-                    <Progress bar className="whiteMove" value={`${this.percentage(move.details.whiteWins,move.details.count)}`}>{this.getProgressLabel(move.details.whiteWins,move.details.count)}</Progress>
-                    <Progress bar className="grayMove" value={`${this.percentage(move.details.draws,move.details.count)}`}>{this.getProgressLabel(move.details.draws,move.details.count)}</Progress>
-                    <Progress bar className="blackMove" value={`${this.percentage(move.details.blackWins,move.details.count)}`}>{this.getProgressLabel(move.details.blackWins,move.details.count)}</Progress>
-                </Progress></Col></Row>
-                {this.props.settings.movesSettings.openingBookWinsIndicator?
-                <Row className="zeroHeight"><Col className="navCol">
-                {this.compareProgress(move)}
-                </Col></Row>:null}
-                </Container>
+                {showStats ? (
+                    <Container>
+                        {this.props.settings.movesSettings.openingBookScoreIndicator?
+                        <Row className="scoresProgress"><Col className="navCol">
+                        {this.compareScores(move)}
+                        </Col></Row>:null}
+                        <Row><Col className="navCol">
+                        <Progress className = "border" multi>
+                            <Progress bar className="whiteMove" value={`${this.percentage(move.details.whiteWins,move.details.count)}`}>{this.getProgressLabel(move.details.whiteWins,move.details.count)}</Progress>
+                            <Progress bar className="grayMove" value={`${this.percentage(move.details.draws,move.details.count)}`}>{this.getProgressLabel(move.details.draws,move.details.count)}</Progress>
+                            <Progress bar className="blackMove" value={`${this.percentage(move.details.blackWins,move.details.count)}`}>{this.getProgressLabel(move.details.blackWins,move.details.count)}</Progress>
+                        </Progress></Col></Row>
+                        {this.props.settings.movesSettings.openingBookWinsIndicator?
+                        <Row className="zeroHeight"><Col className="navCol">
+                        {this.compareProgress(move)}
+                        </Col></Row>:null}
+                    </Container>
+                ) : null}
             </TableCell>
         </TableRow>
     }
