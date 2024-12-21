@@ -307,7 +307,7 @@ export default class OpeningGraph {
                     isRecommended: move.san === recommendedMove
                 };
                 return moveObj;
-            }).filter(e=>!!e)
+            }).filter(e=>!!e && (e.moveCount > 0 || e.isRecommended))
         }
 
         // Add recommended move if it's not in the moves list
