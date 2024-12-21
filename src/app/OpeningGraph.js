@@ -1,6 +1,17 @@
-import {simplifiedFen, isDateMoreRecentThan} from './util'
+import {simplifiedFen, isDateMoreRecentThan, hasNestedVariations, flattenPGN} from './util'
 import * as Constants from './Constants'
 import {chessLogic, rootFen} from '../app/chess/ChessLogic'
+
+/**
+ * Strips PGN headers from the input text
+ * @param {string} pgn PGN text that may contain headers
+ * @returns {string} PGN text with headers removed
+ */
+function stripPGNHeaders(pgn) {
+    // Remove all header tags [...] including multi-line
+    return pgn.replace(/\[\s*\w+\s*"[^"]*"\s*\]\s*/g, '')
+             .trim();
+}
 
 export default class OpeningGraph {
     constructor(variant) {
@@ -10,6 +21,7 @@ export default class OpeningGraph {
         this.repertoire = new Map()
         this.repertoireColor = null
     }
+
     setEntries(arrayEntries, pgnStats){
         this.graph=new Graph(arrayEntries, pgnStats)
         this.hasMoves = true
@@ -39,6 +51,7 @@ export default class OpeningGraph {
         }
         currNode.gameResults.push(resultIndex)
     }
+
     addStatsToRoot(pgnStats, variant) {
         var targetNode = this.getNodeFromGraph(rootFen(variant), true)
         if(!targetNode.details) {
@@ -80,7 +93,6 @@ export default class OpeningGraph {
         }
         details.count = details.whiteWins+details.blackWins+details.draws
         return details
-
     }
 
     addMoveForFen(fullSourceFen, fullTargetFen, move, resultObject) {
@@ -112,9 +124,11 @@ export default class OpeningGraph {
         let fen = simplifiedFen(fullFen)
         this.graph.book.set(fen, this.transform(book))
     }
+
     clearBookNodes(){
         this.graph.book = new Map()
     }
+
     transform(book) {
         if(!book || !book.moves) {
             return book
@@ -147,6 +161,7 @@ export default class OpeningGraph {
             })
         }
     }
+
     getBookNode(fullFen) {
         let fen = simplifiedFen(fullFen)
         return this.graph.book.get(fen)
@@ -232,7 +247,6 @@ export default class OpeningGraph {
                 currentMoveDetails.shortestGame = resultObject.index
         }
 
-
         currentMoveDetails.blackWins += blackWin
         currentMoveDetails.whiteWins += whiteWin
         currentMoveDetails.draws += draw
@@ -257,6 +271,7 @@ export default class OpeningGraph {
         }
         return null
     }
+
     movesForFen(fullFen) {
         let fen = simplifiedFen(fullFen)
         let chess = chessLogic(this.variant, fullFen)
@@ -315,59 +330,56 @@ export default class OpeningGraph {
     }
 
     loadRepertoire(pgnContent, color) {
+        this.chess = chessLogic(this.variant)
+        this.chess.reset()
+
+        // Strip PGN headers before processing
+        pgnContent = stripPGNHeaders(pgnContent);
+
+        // Split into lines and filter out empty ones
+        let lines = pgnContent.split('\n').filter(line => line.trim())
+        console.log('Input lines:', lines)
+
+        // Check if we're dealing with nested format
+        if (hasNestedVariations(pgnContent)) {
+            console.log('Detected nested format, converting to flat format...')
+            lines = flattenPGN(pgnContent)
+            console.log('Converted to flat format:', lines)
+        }
+
         // Clear existing repertoire
         this.repertoire.clear()
         this.repertoireColor = color
 
-        // Clear existing book nodes to prevent them from affecting move counts
-        this.clearBookNodes()
-
-        if(!pgnContent) {
-            return
-        }
-
-        let chess = chessLogic(this.variant)
-        let lines = pgnContent.split('\n')
-
         lines.forEach((line) => {
-            if(line.trim().startsWith('1.')) { // New variation
-                chess.reset()
+            line = line.trim()
+            if(!line.startsWith('1.')) {
+                return
+            }
 
-                // Split into moves but keep move numbers
-                let moves = line.trim().split(/\s+/)
-                let position = ''
+            this.chess.reset()
+            let moves = line.split(/\s+/)
+            for(let i = 0; i < moves.length; i++) {
+                let moveText = moves[i]
+                if(moveText.match(/^\d+\./)) {
+                    continue
+                }
 
-                for(let i = 0; i < moves.length; i++) {
-                    let moveText = moves[i]
-
-                    // Skip move numbers
-                    if(moveText.match(/^\d+\./)) {
-                        continue
-                    }
-
-                    // Store current position before making move
-                    position = chess.fen()
-                    let simplifiedCurrentFen = simplifiedFen(position)
-
-                    let move = chess.move(moveText, {sloppy: true})
-                    if(move) {
-                        // Only store moves for the selected color
-                        let isWhiteMove = chess.turn() === 'b' // If black to move, white just moved
-                        if ((isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_WHITE) ||
-                            (!isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_BLACK)) {
-                            this.repertoire.set(simplifiedCurrentFen, move.san)
-
-                            // Create nodes in graph but with zero counts to ensure proper structure
-                            let sourceNode = this.getNodeFromGraph(simplifiedCurrentFen, true)
-                            if (!sourceNode.playedBy) {
-                                sourceNode.playedBy = {}
-                            }
-                            if (!sourceNode.playedBy[move.san]) {
-                                sourceNode.playedBy[move.san] = 0
-                            }
+                let position = this.chess.fen()
+                let simplifiedCurrentFen = simplifiedFen(position)
+                let move = this.chess.move(moveText, {sloppy: true})
+                if(move) {
+                    let isWhiteMove = this.chess.turn() === 'b'
+                    if ((isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_WHITE) ||
+                        (!isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_BLACK)) {
+                        this.repertoire.set(simplifiedCurrentFen, move.san)
+                        let sourceNode = this.getNodeFromGraph(simplifiedCurrentFen, true)
+                        if (!sourceNode.playedBy) {
+                            sourceNode.playedBy = {}
                         }
-                    } else {
-                        console.warn("Failed to make move:", moveText)
+                        if (!sourceNode.playedBy[move.san]) {
+                            sourceNode.playedBy[move.san] = 0
+                        }
                     }
                 }
             }
@@ -384,9 +396,7 @@ export default class OpeningGraph {
         let move = this.repertoire.get(fen)
         return move
     }
-
 }
-
 
 class Graph {
     constructor(arrayEntries, pgnStats){
@@ -406,9 +416,9 @@ class Graph {
 }
 
 class GraphNode {
-            playedByMax = 0 // used to keep track of how many times the most frequent move is played for ease of calculation later
-            //playedBy = {}
-            //gameResults = []
+    playedByMax = 0 // used to keep track of how many times the most frequent move is played for ease of calculation later
+    //playedBy = {}
+    //gameResults = []
 }
 
 function emptyDetails() {
