@@ -84,21 +84,28 @@ export default class OpeningGraph {
     }
 
     addMoveForFen(fullSourceFen, fullTargetFen, move, resultObject) {
-        var targetNode = this.getNodeFromGraph(fullTargetFen, true)
-        let newDetails = this.getUpdatedMoveDetails(targetNode.details, resultObject)
-        targetNode.details = newDetails
-
-        var currNode = this.getNodeFromGraph(fullSourceFen, true)
-        if(!currNode.playedBy) {
-            currNode.playedBy = {}
+        let sourceFen = simplifiedFen(fullSourceFen)
+        let targetFen = simplifiedFen(fullTargetFen)
+        
+        var sourceNode = this.getNodeFromGraph(sourceFen, true)
+        var targetNode = this.getNodeFromGraph(targetFen, true)
+        
+        if(!sourceNode.playedBy) {
+            sourceNode.playedBy = {}
         }
-        let moveCount = currNode.playedBy[move]
-        if(!moveCount) {
-            moveCount = 0
+        if(!sourceNode.playedBy[move]) {
+            sourceNode.playedBy[move] = 0
         }
-        moveCount = moveCount+1
-        currNode.playedBy[move] = moveCount
-        currNode.playedByMax = Math.max(currNode.playedByMax, moveCount)
+        sourceNode.playedBy[move]++
+        
+        if(!targetNode.details) {
+            targetNode.details = resultObject.index
+        } else {
+            targetNode.details = this.getUpdatedMoveDetails(targetNode.details, resultObject)
+        }
+        
+        let moveCount = sourceNode.playedBy[move]
+        sourceNode.playedByMax = Math.max(sourceNode.playedByMax, moveCount)
     }
 
     addBookNode(fullFen, book) {
@@ -273,13 +280,16 @@ export default class OpeningGraph {
                     console.warn("Failed to make move:", entry[0], "in position:", fullFen)
                     return null;
                 }
-                let targetNodeDetails = this.getDetailsForFen(chess.fen())
+                let targetFen = chess.fen()
+                let targetNode = this.graph.nodes.get(simplifiedFen(targetFen))
+                let details = this.getDetailsForFen(targetFen)
+                
                 let moveObj = {
                     orig: move.from,
                     dest: move.to,
                     san: move.san,
-                    details: targetNodeDetails,
-                    moveCount: entry[1],
+                    details: details,
+                    moveCount: entry[1], // Use playedBy count which tracks actual played moves
                     isRecommended: move.san === recommendedMove
                 };
                 return moveObj;
@@ -300,11 +310,8 @@ export default class OpeningGraph {
                     isRecommended: true
                 };
                 moves.push(moveObj)
-            } else {
-                console.warn("Failed to add recommended move:", recommendedMove, "in position:", fullFen)
             }
         }
-
         return moves
     }
 
