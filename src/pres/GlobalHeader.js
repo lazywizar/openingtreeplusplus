@@ -231,7 +231,7 @@ const GlobalHeader = (props) => {
             <NavItem>
               <NavLink className="navLinkButton" onClick={launch("https://www.youtube.com/watch?v=AJ66-HqdpXE","mainVideo")}>
                 <span>
-                  "It's so powerful" - IM Eric Rosen
+                  "It's so MUCH MORE powerful" - Someone will say!!
                 </span>
                 <span className="smallText">
                   [Video]
