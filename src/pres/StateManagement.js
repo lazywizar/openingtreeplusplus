@@ -364,7 +364,10 @@ function mergePlayerAndBookMoves(playerMovesToShow, bookMovesToShow) {
         move.compareTo = {
             bookScore: getCompareScores(bookMove),
             userScore: getCompareScores(move),
-            values: getCompareToValues(bookMove)
+            values: [
+                move.details.whiteWins/move.details.count*100,
+                (move.details.whiteWins+move.details.draws)/move.details.count*100
+            ]
         };
     });
 }
