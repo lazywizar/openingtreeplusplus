@@ -86,10 +86,10 @@ export default class OpeningGraph {
     addMoveForFen(fullSourceFen, fullTargetFen, move, resultObject) {
         let sourceFen = simplifiedFen(fullSourceFen)
         let targetFen = simplifiedFen(fullTargetFen)
-        
+
         var sourceNode = this.getNodeFromGraph(sourceFen, true)
         var targetNode = this.getNodeFromGraph(targetFen, true)
-        
+
         if(!sourceNode.playedBy) {
             sourceNode.playedBy = {}
         }
@@ -97,13 +97,13 @@ export default class OpeningGraph {
             sourceNode.playedBy[move] = 0
         }
         sourceNode.playedBy[move]++
-        
+
         if(!targetNode.details) {
             targetNode.details = resultObject.index
         } else {
             targetNode.details = this.getUpdatedMoveDetails(targetNode.details, resultObject)
         }
-        
+
         let moveCount = sourceNode.playedBy[move]
         sourceNode.playedByMax = Math.max(sourceNode.playedByMax, moveCount)
     }
@@ -119,7 +119,7 @@ export default class OpeningGraph {
         if(!book || !book.moves) {
             return book
         }
-        
+
         // Filter moves based on repertoire color
         let filteredMoves = book.moves.filter(move => {
             let chess = chessLogic(this.variant)
@@ -281,9 +281,8 @@ export default class OpeningGraph {
                     return null;
                 }
                 let targetFen = chess.fen()
-                let targetNode = this.graph.nodes.get(simplifiedFen(targetFen))
                 let details = this.getDetailsForFen(targetFen)
-                
+
                 let moveObj = {
                     orig: move.from,
                     dest: move.to,
@@ -319,7 +318,7 @@ export default class OpeningGraph {
         // Clear existing repertoire
         this.repertoire.clear()
         this.repertoireColor = color
-        
+
         // Clear existing book nodes to prevent them from affecting move counts
         this.clearBookNodes()
 
@@ -330,21 +329,19 @@ export default class OpeningGraph {
         let chess = chessLogic(this.variant)
         let lines = pgnContent.split('\n')
 
-        lines.forEach((line, index) => {
+        lines.forEach((line) => {
             if(line.trim().startsWith('1.')) { // New variation
                 chess.reset()
 
                 // Split into moves but keep move numbers
                 let moves = line.trim().split(/\s+/)
-                let moveNumber = 1
                 let position = ''
 
                 for(let i = 0; i < moves.length; i++) {
                     let moveText = moves[i]
 
-                    // Skip move numbers but use them to track whose move it is
+                    // Skip move numbers
                     if(moveText.match(/^\d+\./)) {
-                        moveNumber = parseInt(moveText)
                         continue
                     }
 
@@ -359,7 +356,7 @@ export default class OpeningGraph {
                         if ((isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_WHITE) ||
                             (!isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_BLACK)) {
                             this.repertoire.set(simplifiedCurrentFen, move.san)
-                            
+
                             // Create nodes in graph but with zero counts to ensure proper structure
                             let sourceNode = this.getNodeFromGraph(simplifiedCurrentFen, true)
                             if (!sourceNode.playedBy) {

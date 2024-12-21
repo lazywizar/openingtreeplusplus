@@ -18,8 +18,9 @@ import LockOpen from '@material-ui/icons/Lock'
 import ExitToApp from '@material-ui/icons/ExitToApp'
 import {Spinner} from 'reactstrap'
 import { trackEvent } from '../../app/Analytics'
+import BaseComponent from './BaseComponent'
 
-export default class User extends React.Component {
+export default class User extends BaseComponent {
 
     constructor(props) {
         super(props)
@@ -30,11 +31,14 @@ export default class User extends React.Component {
             selectedPlayer:{},
             selectedEvent:{}
         }
-        
-        
     }
-    
-    
+
+    handlePropChange(key, value) {
+        if (key === 'gamesProcessed' && value > 0) {
+            this.setState({isGamesSubsectionOpen: true});
+        }
+    }
+
     editPlayerName(event) {
         this.setState({
             playerName: event.target.value,
@@ -60,10 +64,6 @@ export default class User extends React.Component {
             selectedEvent:event})
     }
 
-    componentWillReceiveProps(nextProps) {
-        this.setState({playerNameError:'', tournamentUrlError: ''})
-    }
-    
     validateInputDetailsSet() {
         if(this.props.site === Constants.SITE_EVENT_DB){
             if(!this.state.selectedEvent){

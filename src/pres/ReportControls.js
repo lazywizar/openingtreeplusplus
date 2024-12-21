@@ -23,7 +23,7 @@ export default class ReportControls extends React.Component {
                 id="fenField"
                 multiline
                 label="FEN"
-                rowsMax="2"
+                maxRows={2}
                 value={this.props.fen}
                 inputProps={{
                     style: {fontSize: 12},

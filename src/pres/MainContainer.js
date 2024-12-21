@@ -26,7 +26,6 @@ import * as Constants from '../app/Constants'
 import OpeningGraph from '../app/OpeningGraph'
 import { chessLogic } from '../app/chess/ChessLogic'
 import cookieManager from '../app/CookieManager'
-import { handleDarkMode } from '../pres/DarkMode';
 import UserProfile, { USER_PROFILE_NEW_USER } from '../app/UserProfile'
 import {initializeAnalytics} from '../app/Analytics'
 import { fetchBookMoves } from '../app/OpeningBook'
@@ -164,10 +163,10 @@ export default class MainContainer extends React.Component {
 
   getDarkModeSettingFromCookie () {
     const darkModeCookie = cookieManager.getDarkModeCookie();
-    if(darkModeCookie === undefined){
-      return true// default value
+    if(darkModeCookie === undefined || darkModeCookie === null){
+      return true; // default value
     }
-    return darkModeCookie === 'true';
+    return darkModeCookie !== 'false'; // treat anything except explicit 'false' as true
   }
 
   forceFetchBookMoves() {
@@ -183,7 +182,7 @@ export default class MainContainer extends React.Component {
     this.pendingBookMoves.set(this.state.fen, controller)
 
     // Start the fetch but don't add the moves yet
-    let moves = fetchBookMoves(
+    fetchBookMoves(
       this.state.fen,
       this.state.variant,
       this.state.settings.movesSettings,

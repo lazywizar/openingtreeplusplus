@@ -16,8 +16,9 @@ import {serializeOpeningTree, deserializeOpeningTree} from '../../app/OpeningTre
 import {proxy} from 'comlink'
 import streamsaver from 'streamsaver'
 import cookieManager from '../../app/CookieManager'
+import BaseComponent from './BaseComponent'
 
-export default class Actions extends React.Component {
+export default class Actions extends BaseComponent {
     constructor(props) {
         super(props) 
         this.state = {
@@ -26,20 +27,23 @@ export default class Actions extends React.Component {
         }
         streamsaver.mitm = "download/download-mitm.html"
         this.encoder = new TextEncoder()
-
     }
+
+    handlePropChange(key, value, prevValue) {
+        if (key === 'files' && value !== prevValue && value.length > 0) {
+            this.importTreeClicked();
+        }
+        if (key === 'gamesProcessed' && prevValue > 0 && !this.state.isGamesSubsectionOpen) {
+            this.setState({isGamesSubsectionOpen: true});
+        }
+    }
+
     unload = () => {
         if (this.pgnReader) {
             this.pgnReader.stopDownloading()
         }
     }
-    componentDidMount() {
-        window.addEventListener("beforeunload", this.unload);
-    }
 
-    componentWillUnmount() {
-        window.removeEventListener("beforeunload", this.unload);
-    }
     importTreeClicked() {
         this.setState({exportingInProgress:true})
         trackEvent(Constants.EVENT_CATEGORY_MAIN_ACTION, "LoadTree", this.props.site, this.props.playerColor === Constants.PLAYER_COLOR_WHITE ? 1 : 0)
@@ -144,11 +148,6 @@ export default class Actions extends React.Component {
             return this.props.selectedNotablePlayer.name
         }
         return this.props.playerName
-    }
-    componentWillReceiveProps(newProps) {
-        if(newProps.gamesProcessed>0) {
-            this.setState({isGamesSubsectionOpen:true})
-        }
     }
 
     load() {

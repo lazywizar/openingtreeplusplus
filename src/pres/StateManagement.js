@@ -324,17 +324,17 @@ function getBookMoves() {
     }
 
     // First check if we have moves in the opening graph
-    let moves = this.state.openingGraph.getBookNode(this.chess.fen())
-    if(!moves) {
+    let bookMoves = this.state.openingGraph.getBookNode(this.chess.fen())
+    if(!bookMoves) {
         // If not, trigger a fetch
-        moves = this.forceFetchBookMoves()
+        bookMoves = this.forceFetchBookMoves()
     }
-    return moves
+    return bookMoves
 }
 
 function forceFetchBookMoves() {
     // Start the fetch but don't add the moves yet
-    let moves = fetchBookMoves(this.state.fen, this.state.variant, this.state.settings.movesSettings, (fetchedMoves)=>{
+    fetchBookMoves(this.state.fen, this.state.variant, this.state.settings.movesSettings, (fetchedMoves)=>{
         // Only add the moves once they're actually fetched
         if (fetchedMoves && fetchedMoves.moves) {
             // Only add to book nodes, not to state

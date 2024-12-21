@@ -17,8 +17,9 @@ import MuiCollapse from '@material-ui/core/Collapse';
 import * as SitePolicy from '../../app/SitePolicy'
 import { Radio, FormControlLabel, RadioGroup, FormHelperText, FormControl, FormLabel} from '@material-ui/core';
 import deepEqual from 'deep-equal'
+import BaseComponent from './BaseComponent'
 
-export default class Filters extends React.Component {
+export default class Filters extends BaseComponent {
 
     constructor(props) {
         super(props)
@@ -94,9 +95,6 @@ export default class Filters extends React.Component {
 
         }
         return <span>{getNumberIcon(3)} Color and filters</span>
-    }
-    componentWillReceiveProps(newProps) {
-        this.setState({...newProps.advancedFilters, playerColor:newProps.playerColor})
     }
 
     areAdvancedFiltersApplied(){
