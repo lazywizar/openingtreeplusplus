@@ -344,7 +344,11 @@ export default class OpeningGraph {
         if (hasNestedVariations(pgnContent)) {
             console.log('Detected nested format, converting to flat format...')
             lines = flattenPGN(pgnContent)
-            console.log('Converted to flat format:', lines)
+            //console.log('Converted to flat format:', lines)
+            for (let i = 0; i < lines.length; i++) {
+                console.log(`Line ${i + 1}: ${lines[i]}`);
+            }
+            console.log(lines.length, 'lines');
         }
 
         // Clear existing repertoire

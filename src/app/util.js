@@ -81,114 +81,137 @@ export function hasNestedVariations(pgn) {
     return pgn.includes('(') && pgn.includes(')')
 }
 
-/**
- * Converts a nested PGN format to flat format
- * @param {string} pgn PGN string with nested variations
- * @returns {string[]} Array of flattened variations
- */
 export function flattenPGN(pgn) {
     // Clean up the PGN string
-    pgn = pgn.replace(/\{[^}]*\}/g, '')   // Remove comments
-         .replace(/\$\d+/g, '')            // Remove NAGs
-         .replace(/\s+/g, ' ')             // Normalize whitespace
-         .replace(/\*$/, '')               // Remove game termination marker
-         .trim()
+    pgn = cleanPGN(pgn);
+    console.log('=== Input PGN after cleanup ===');
+    console.log(pgn);
 
-    console.log('Input PGN after cleanup:', pgn)
-    
-    // Split into tokens, keeping parentheses separate
-    let tokens = pgn.replace(/\(/g, ' ( ')
-                   .replace(/\)/g, ' ) ')
-                   .split(/\s+/)
-                   .filter(t => t.length > 0)
-    
-    console.log('Tokens:', tokens)
-    
-    let variations = []
-    let stack = []
-    let mainLine = []
-    let currentMoves = []
-    let isInVariation = false
-    let basePosition = []
-    
-    for (let i = 0; i < tokens.length; i++) {
-        let token = tokens[i]
-        console.log(`Processing token: "${token}"`)
-        
+    const lines = [];
+    let mainLine = [];
+    let variationStack = [];
+    let isBlackToMove = false;
+
+    // Split the input into tokens
+    const tokens = pgn.match(/\d+\.|\.{3}|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8]|O-O(?:-O)?|\(|\)|\S+/g) || [];
+
+    let currentPosition = 0;
+    let lastMoveNumber = 1;
+    let lastWhiteMove = '';
+
+    while (currentPosition < tokens.length) {
+        const token = tokens[currentPosition];
+
+        // Track move numbers
+        if (token.match(/^\d+\.$/)) {
+            lastMoveNumber = parseInt(token);
+            currentPosition++;
+            continue;
+        }
+
         if (token === '(') {
-            isInVariation = true
-            // Start of a variation - save current state
-            console.log('Found variation start, mainLine:', mainLine.join(' '))
-            stack.push([...mainLine])
-            
-            // Find the last white move and its number
-            let lastWhiteMoveIndex = -1
-            for (let j = mainLine.length - 1; j >= 0; j--) {
-                if (mainLine[j].match(/^\d+\./)) {
-                    lastWhiteMoveIndex = j;
-                    break;
-                }
+            variationStack.push({
+                line: [...mainLine],
+                isBlack: isBlackToMove,
+                moveNumber: lastMoveNumber,
+                whiteMove: lastWhiteMove
+            });
+
+            // If this is a Black variation after White's move
+            if (tokens[currentPosition + 1] === '...' || tokens[currentPosition + 1] === '..') {
+                mainLine = mainLine.slice(0, -1);
+                isBlackToMove = true;
+            } else {
+                mainLine = mainLine.slice(0, isBlackToMove ? -2 : -1);
+                isBlackToMove = false;
             }
-            
-            // Get the base position (all moves up to the last white move)
-            basePosition = mainLine.slice(0, lastWhiteMoveIndex + 2)
-            currentMoves = [...basePosition]
-            console.log('Starting variation from:', currentMoves.join(' '))
-            continue
+            currentPosition++;
+            continue;
         }
-        
+
         if (token === ')') {
-            // End of variation - add it to results and restore previous state
-            if (currentMoves.length > 0) {
-                let variation = currentMoves.join(' ')
-                // Clean up any duplicate move numbers and whitespace
-                variation = variation.replace(/\s+/g, ' ').trim()
-                console.log('Adding variation:', variation)
-                variations.push(variation)
+            if (mainLine.length > 0) {
+                lines.push(formatPGNLine(mainLine));
             }
-            // Restore to previous state
-            currentMoves = stack.pop()
-            mainLine = [...currentMoves]
-            isInVariation = stack.length > 0
-            console.log('Restored mainLine to:', mainLine.join(' '))
-            continue
+            const prevState = variationStack.pop();
+            mainLine = prevState.line;
+            isBlackToMove = prevState.isBlack;
+            lastMoveNumber = prevState.moveNumber;
+            lastWhiteMove = prevState.whiteMove;
+            currentPosition++;
+            continue;
         }
-        
-        // Handle move numbers and moves
-        if (token.includes('...')) {
-            // For black's moves in variations, add the move but skip the "..."
-            if (i + 1 < tokens.length) {
-                currentMoves.push(tokens[i + 1])
-                if (!isInVariation) mainLine.push(token, tokens[i + 1])
-                i++ // Skip the next token since we've used it
-            }
-        } else if (token.match(/^\d+\./)) {
-            let moveNum = parseInt(token)
-            // Add move number if it's the main line or a new move in variation
-            if (!isInVariation || currentMoves[currentMoves.length - 1].match(/[a-zA-Z]/)) {
-                currentMoves.push(token)
-                if (!isInVariation) mainLine.push(token)
-            }
-        } else {
-            // Regular move
-            currentMoves.push(token)
-            if (!isInVariation) mainLine.push(token)
+
+        // Skip ellipsis
+        if (token === '...' || token === '..') {
+            isBlackToMove = true;
+            currentPosition++;
+            continue;
         }
+
+        // Add the move to the main line
+        if (token.match(/[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8]|O-O(?:-O)?/)) {
+            mainLine.push(token);
+            if (!isBlackToMove) {
+                lastWhiteMove = token;
+            }
+            isBlackToMove = !isBlackToMove;
+        }
+        currentPosition++;
     }
-    
-    // Add the main line if not already in variations
-    let mainLineStr = mainLine.join(' ')
-    console.log('Adding main line:', mainLineStr)
-    variations.unshift(mainLineStr)  // Add main line as first variation
-    
-    // Remove any duplicate variations and clean up
-    variations = [...new Set(variations)].map(v => 
-        v.replace(/\s+/g, ' ')
-         .replace(/^\s+|\s+$/g, '')
-    )
-    
-    console.log('All variations:')
-    variations.forEach((v, i) => console.log(`${i + 1}. ${v}`))
-    
-    return variations
+
+    // Add the main line if it's not empty
+    if (mainLine.length > 0) {
+        lines.push(formatPGNLine(mainLine));
+    }
+
+    return lines;
+}
+
+function cleanPGN(pgn) {
+    return pgn
+        // Remove comments in curly braces {comment}
+        .replace(/\{[^}]*\}/g, '')
+
+        // Remove Numeric Annotation Glyphs (NAGs) like $1, $2, etc.
+        .replace(/\$\d+/g, '')
+
+        // Remove annotation symbols (!!, !, ?!, ?, ??, ⩲, ±, etc.)
+        .replace(/[!?△⌓★☆⩱⩲±∓∞⟫⟪]+/g, '')
+
+        // Remove move evaluation marks (+-, -+, =, etc.)
+        .replace(/[+\-=]+(?:\s|$)/g, '')
+
+        // Remove result markers (1-0, 0-1, 1/2-1/2)
+        .replace(/(?:1-0|0-1|1\/2-1\/2)$/g, '')
+
+        // Remove game termination marker
+        .replace(/\*$/, '')
+
+        // Remove clock times in square brackets [%clk 1:19:00]
+        .replace(/\[[%\w\s\d:.]+\]/g, '')
+
+        // Normalize all types of dots for Black's moves
+        .replace(/\.{2,}/g, '...')
+
+        // Normalize whitespace: multiple spaces/newlines to single space
+        .replace(/\s+/g, ' ')
+
+        // Final trim
+        .trim();
+}
+
+function formatPGNLine(moves) {
+    let formattedLine = '';
+    let moveNumber = 1;
+
+    for (let i = 0; i < moves.length; i++) {
+        if (i % 2 === 0) {
+            formattedLine += moveNumber + '. ';
+            moveNumber++;
+        }
+        formattedLine += moves[i] + ' ';
+    }
+
+    return formattedLine.trim();
 }
