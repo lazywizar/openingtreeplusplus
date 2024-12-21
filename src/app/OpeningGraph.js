@@ -316,14 +316,19 @@ export default class OpeningGraph {
     }
 
     loadRepertoire(pgnContent, color) {
-        // Clear existing repertoire and book nodes
+        // Clear existing repertoire
         this.repertoire.clear()
-        this.clearBookNodes()
         this.repertoireColor = color
+        
+        // Clear existing book nodes to prevent them from affecting move counts
+        this.clearBookNodes()
 
-        // Split into lines
-        let lines = pgnContent.split('\n')
+        if(!pgnContent) {
+            return
+        }
+
         let chess = chessLogic(this.variant)
+        let lines = pgnContent.split('\n')
 
         lines.forEach((line, index) => {
             if(line.trim().startsWith('1.')) { // New variation
@@ -354,6 +359,15 @@ export default class OpeningGraph {
                         if ((isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_WHITE) ||
                             (!isWhiteMove && this.repertoireColor === Constants.PLAYER_COLOR_BLACK)) {
                             this.repertoire.set(simplifiedCurrentFen, move.san)
+                            
+                            // Create nodes in graph but with zero counts to ensure proper structure
+                            let sourceNode = this.getNodeFromGraph(simplifiedCurrentFen, true)
+                            if (!sourceNode.playedBy) {
+                                sourceNode.playedBy = {}
+                            }
+                            if (!sourceNode.playedBy[move.san]) {
+                                sourceNode.playedBy[move.san] = 0
+                            }
                         }
                     } else {
                         console.warn("Failed to make move:", moveText)

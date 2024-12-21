@@ -355,23 +355,17 @@ function mergePlayerAndBookMoves(playerMovesToShow, bookMovesToShow) {
     }
     let bookMovesMap = createMap(bookMovesToShow?.moves);
     playerMovesToShow.forEach((move) => {
-        let originalMove = { ...move };
         let bookMove = bookMovesMap.get(move.san);
-
         if (!bookMove) {
             return;
         }
 
-        // Preserve the original isRecommended flag from the player move
-        Object.assign(move, {
-            ...bookMove,
-            isRecommended: originalMove.isRecommended,
-            compareTo: {
-                bookScore: getCompareScores(bookMove),
-                userScore: getCompareScores(move),
-                values: getCompareToValues(bookMove),
-            }
-        });
+        // Only merge the compareTo data, preserve all other move data
+        move.compareTo = {
+            bookScore: getCompareScores(bookMove),
+            userScore: getCompareScores(move),
+            values: getCompareToValues(bookMove)
+        };
     });
 }
 
